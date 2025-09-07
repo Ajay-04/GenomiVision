@@ -1,0 +1,61 @@
+samples,title,tissue,metastasis
+CA.102548,tumor rep1,breast tumor,yes
+CA.104338,tumor rep2,breast tumor,yes
+CA.105094,tumor rep3,breast tumor,yes
+CA.109745,tumor rep4,breast tumor,no
+CA.1906415,tumor rep5,breast tumor,no
+CA.1912627,tumor rep6,breast tumor,yes
+CA.1924346,tumor rep7,breast tumor,no
+CA.1926760,tumor rep8,breast tumor,no
+CA.1927842,tumor rep9,breast tumor,yes
+CA.1933414,tumor rep10,breast tumor,no
+CA.1940640,tumor rep11,breast tumor,yes
+CA.2004407,tumor rep12,breast tumor,no
+CA.2005288,tumor rep13,breast tumor,no
+CA.2006047,tumor rep14,breast tumor,yes
+CA.2008260,tumor rep15,breast tumor,no
+CA.2009329,tumor rep16,breast tumor,yes
+CA.2009381,tumor rep17,breast tumor,no
+CA.2009850,tumor rep18,breast tumor,yes
+CA.2017611,tumor rep19,breast tumor,yes
+CA.2039179,tumor rep20,breast tumor,yes
+CA.2040686,tumor rep21,breast tumor,no
+CA.2045012,tumor rep22,breast tumor,no
+CA.2046297,tumor rep23,breast tumor,yes
+CA.348981,tumor rep24,breast tumor,yes
+CA.354300,tumor rep25,breast tumor,no
+CA.359448,tumor rep26,breast tumor,no
+CA.94377,tumor rep27,breast tumor,yes
+CA.98389,tumor rep28,breast tumor,no
+CA.98475,tumor rep29,breast tumor,no
+CA.99145,tumor rep30,breast tumor,yes
+CAP.102548,normal rep1,normal breast tissue,yes
+CAP.104338,normal rep2,normal breast tissue,yes
+CAP.105094,normal rep3,normal breast tissue,yes
+CAP.109745,normal rep4,normal breast tissue,no
+CAP.1906415,normal rep5,normal breast tissue,no
+CAP.1912627,normal rep6,normal breast tissue,yes
+CAP.1924346,normal rep7,normal breast tissue,no
+CAP.1926760,normal rep8,normal breast tissue,no
+CAP.1927842,normal rep9,normal breast tissue,yes
+CAP.1933414,normal rep10,normal breast tissue,no
+CAP.1940640,normal rep11,normal breast tissue,yes
+CAP.2004407,normal rep12,normal breast tissue,no
+CAP.2005288,normal rep13,normal breast tissue,no
+CAP.2006047,normal rep14,normal breast tissue,yes
+CAP.2008260,normal rep15,normal breast tissue,no
+CAP.2009329,normal rep16,normal breast tissue,yes
+CAP.2009381,normal rep17,normal breast tissue,no
+CAP.2009850,normal rep18,normal breast tissue,yes
+CAP.2017611,normal rep19,normal breast tissue,yes
+CAP.2039179,normal rep20,normal breast tissue,yes
+CAP.2040686,normal rep21,normal breast tissue,no
+CAP.2046297,normal rep22,normal breast tissue,no
+CAP.2046641,normal rep23,normal breast tissue,yes
+CAP.348981,normal rep24,normal breast tissue,yes
+CAP.354300,normal rep25,normal breast tissue,no
+CAP.359448,normal rep26,normal breast tissue,no
+CAP.94377,normal rep27,normal breast tissue,yes
+CAP.98389,normal rep28,normal breast tissue,no
+CAP.98475,normal rep29,normal breast tissue,no
+CAP.99145,normal rep30,normal breast tissue,yes
