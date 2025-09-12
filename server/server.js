@@ -4,7 +4,7 @@ const cors = require('cors');
 const session = require('express-session');
 const path = require('path');
 const fs = require('fs');
-require('dotenv').config();
+require('dotenv').config({ path: '../.env' });
 
 // Debug: Log the DATABASE_URL environment variable
 console.log('DATABASE_URL:', process.env.DATABASE_URL);
