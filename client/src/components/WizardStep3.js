@@ -1,32 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 
-// Utility: detect a likely delimiter from a few sample lines
-function detectDelimiter(lines) {
-  const candidates = [',', '\t', ';', '|'];
-  const scores = candidates.map((c) => {
-    let total = 0;
-    const sample = lines.slice(0, 5);
-    sample.forEach((ln) => {
-      total += (ln.match(new RegExp(escapeRegExp(c), 'g')) || []).length;
-    });
-    return total;
-  });
-  const max = Math.max(...scores);
-  const idx = scores.indexOf(max);
-  return max > 0 ? candidates[idx] : ','; // default to comma
-}
-
-function escapeRegExp(string) {
-  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-function splitLine(line, delim) {
-  // Simple split, trim quotes/spaces
-  return line
-    .split(delim)
-    .map((c) => c.replace(/^\s*"?|"?\s*$/g, '').trim());
-}
-
+// Utility functions for data processing
 function isNumericLike(value) {
   if (value === null || value === undefined) return false;
   const v = String(value).trim();
@@ -35,247 +9,568 @@ function isNumericLike(value) {
   return Number.isFinite(n);
 }
 
-const WizardStep3 = ({ onUpdate, onBack, fileName, fileContent }) => {
-  const [delimiter, setDelimiter] = useState('auto');
-  const [hasHeader, setHasHeader] = useState(true);
-  const [xIndex, setXIndex] = useState(0);
-  const [yIndex, setYIndex] = useState(1);
-  const [rowStart, setRowStart] = useState(1);
-  const [rowEnd, setRowEnd] = useState(100);
-  const [attributes, setAttributes] = useState('');
+const WizardStep3 = ({ onUpdate, onBack, datasets = [], selectedDatasets = [], commonColumns = [], primaryKey = '' }) => {
+  const [selectedDatasetIds, setSelectedDatasetIds] = useState(selectedDatasets);
+  const [detectedCommonColumns, setDetectedCommonColumns] = useState([]);
+  const [selectedPrimaryKey, setSelectedPrimaryKey] = useState('');
+  const [mergeMode, setMergeMode] = useState('single'); // 'single', 'merge', 'separate'
+  const [columnMappings, setColumnMappings] = useState({});
   const [error, setError] = useState('');
-  const [isInitializing, setIsInitializing] = useState(true);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [datasetStats, setDatasetStats] = useState({});
 
 
-  const lines = useMemo(() => {
-    if (!fileContent) return [];
-    const raw = fileContent
-      .split(/\r?\n/)
-      .map((l) => l.trimEnd())
-      .filter((l) => l && !l.startsWith('#'));
-    return raw;
-  }, [fileContent]);
-
-  const usedDelimiter = useMemo(() => {
-    if (delimiter !== 'auto') return delimiter;
-    return detectDelimiter(lines);
-  }, [delimiter, lines]);
-
-  const table = useMemo(() => {
-    if (!lines.length) return { headers: [], rows: [] };
-    const headerLine = lines[0];
-    const firstRow = splitLine(headerLine, usedDelimiter);
-    const dataLines = hasHeader ? lines.slice(1) : lines;
-    const rows = dataLines.map((ln) => splitLine(ln, usedDelimiter));
-    const colCount = Math.max(firstRow.length, ...rows.map((r) => r.length));
-    const headers = hasHeader
-      ? firstRow.map((h, i) => h || `Column ${i + 1}`)
-      : Array.from({ length: colCount }, (_, i) => `Column ${i + 1}`);
-    return { headers, rows };
-  }, [lines, usedDelimiter, hasHeader]);
-
-  // Auto-detect best X and Y columns and auto-advance if valid
-  useEffect(() => {
-    setIsInitializing(true);
-    if (table.headers.length > 0 && table.rows.length > 0) {
-      let bestX = 0;
-      let bestY = table.headers.length > 1 ? 1 : 0;
-
-      for (let i = 0; i < table.headers.length; i++) {
-        if (table.rows.some(row => isNumericLike(row[i]))) {
-          bestY = i;
-          break;
-        }
+  // Analyze datasets for common columns and statistics
+  const analyzeDatasets = useMemo(() => {
+    if (!datasets || datasets.length === 0) return { commonCols: [], stats: {} };
+    
+    const stats = {};
+    const allColumns = [];
+    
+    datasets.forEach(dataset => {
+      stats[dataset.id] = {
+        fileName: dataset.fileName,
+        rows: dataset.rowCount || 0,
+        columns: dataset.columnCount || 0,
+        headers: dataset.headers || []
+      };
+      
+      if (dataset.headers && dataset.headers.length > 0) {
+        allColumns.push(dataset.headers);
       }
-
-      if (bestX === bestY) {
-        bestY = (bestY + 1) % table.headers.length;
-      }
-
-      setXIndex(bestX);
-      setYIndex(bestY);
-      setRowStart(1);
-      setRowEnd(Math.min(100, table.rows.length));
-      setIsInitializing(false);
-    } else {
-      setIsInitializing(fileContent ? true : false);
+    });
+    
+    // Find common columns across all datasets
+    let commonCols = [];
+    if (allColumns.length > 1) {
+      commonCols = allColumns[0].filter(col => 
+        allColumns.every(headers => headers.includes(col))
+      );
     }
-  }, [table.headers, table.rows, fileContent]);
+    
+    return { commonCols, stats };
+  }, [datasets]);
 
-  const previewRows = useMemo(() => table.rows.slice(0, 50), [table.rows]);
+  // Update state when datasets change
+  useEffect(() => {
+    if (!datasets || datasets.length === 0) return;
+    
+    const { commonCols, stats } = analyzeDatasets;
+    setDetectedCommonColumns(commonCols);
+    setDatasetStats(stats);
+    
+    // Only update selected datasets if they haven't been set yet
+    if (selectedDatasetIds.length === 0) {
+      setSelectedDatasetIds(datasets.map(d => d.id));
+    }
+    
+    // Auto-select first common column as primary key if available
+    if (commonCols.length > 0 && !selectedPrimaryKey) {
+      setSelectedPrimaryKey(commonCols[0]);
+    }
+    
+    // Set merge mode based on number of datasets and common columns
+    if (datasets.length === 1) {
+      setMergeMode('single');
+    } else if (commonCols.length > 0) {
+      setMergeMode('merge');
+    } else {
+      setMergeMode('separate');
+    }
+  }, [datasets.length, datasets]); // Remove analyzeDatasets from dependencies to prevent infinite loop
+
+  // Merge datasets based on primary key
+  const mergeDatasets = () => {
+    if (!selectedPrimaryKey || selectedDatasetIds.length === 0) {
+      return null;
+    }
+    
+    const selectedDatasetObjects = datasets.filter(d => selectedDatasetIds.includes(d.id));
+    
+    if (selectedDatasetObjects.length === 1) {
+      // Single dataset - return as is
+      const dataset = selectedDatasetObjects[0];
+      return {
+        x: dataset.x || [],
+        y: dataset.y || [],
+        headers: dataset.headers || [],
+        rows: dataset.rows || [],
+        mergedFrom: [dataset.fileName]
+      };
+    }
+    
+    if (mergeMode === 'separate' || !selectedPrimaryKey) {
+      // Cannot merge - no common columns
+      return null;
+    }
+    
+    // Merge datasets on primary key
+    const mergedData = { x: [], y: [], headers: [], rows: [], mergedFrom: [] };
+    const primaryKeyIndex = {};
+    
+    selectedDatasetObjects.forEach((dataset, datasetIndex) => {
+      const pkIndex = dataset.headers.indexOf(selectedPrimaryKey);
+      if (pkIndex === -1) return;
+      
+      dataset.rows.forEach(row => {
+        const pkValue = row[pkIndex];
+        if (!primaryKeyIndex[pkValue]) {
+          primaryKeyIndex[pkValue] = mergedData.rows.length;
+          mergedData.rows.push([pkValue]);
+          mergedData.x.push(pkValue);
+        }
+        
+        const targetRowIndex = primaryKeyIndex[pkValue];
+        // Add other columns from this dataset
+        dataset.headers.forEach((header, colIndex) => {
+          if (header !== selectedPrimaryKey) {
+            const newHeader = `${header}_${dataset.fileName.split('.')[0]}`;
+            if (!mergedData.headers.includes(newHeader)) {
+              mergedData.headers.push(newHeader);
+            }
+            const headerIndex = mergedData.headers.indexOf(newHeader);
+            while (mergedData.rows[targetRowIndex].length <= headerIndex) {
+              mergedData.rows[targetRowIndex].push('');
+            }
+            mergedData.rows[targetRowIndex][headerIndex] = row[colIndex] || '';
+          }
+        });
+      });
+      
+      mergedData.mergedFrom.push(dataset.fileName);
+    });
+    
+    // Set primary key as first header
+    mergedData.headers = [selectedPrimaryKey, ...mergedData.headers];
+    
+    // Extract y values (assuming second column for now)
+    mergedData.y = mergedData.rows.map(row => {
+      const val = parseFloat(row[1]);
+      return isNaN(val) ? 0 : val;
+    });
+    
+    return mergedData;
+  };
+
+  const handleDatasetToggle = (datasetId) => {
+    setSelectedDatasetIds(prev => {
+      if (prev.includes(datasetId)) {
+        return prev.filter(id => id !== datasetId);
+      } else {
+        return [...prev, datasetId];
+      }
+    });
+  };
+
+  const canMerge = detectedCommonColumns.length > 0 && selectedDatasetIds.length > 1;
+  const selectedDatasetObjects = datasets.filter(d => selectedDatasetIds.includes(d.id));
 
   const handleApply = (e) => {
     e.preventDefault();
     setError('');
-    console.log('[WizardStep3] Apply clicked', {
-      fileName,
-      hasHeader,
-      delimiter: usedDelimiter,
-      xIndex,
-      yIndex,
-      rowStart,
-      rowEnd,
-      totalRows: table.rows.length,
-      headers: table.headers,
-    });
-    if (!table.rows.length || table.headers.length < 2) {
-      setError('Not enough columns/rows to build a chart.');
+    setIsAnalyzing(true);
+    
+    if (selectedDatasetIds.length === 0) {
+      setError('Please select at least one dataset.');
+      setIsAnalyzing(false);
       return;
     }
-    if (xIndex === null || yIndex === null) {
-      setError('Please select both X and Y columns.');
+    
+    if (selectedDatasetIds.length > 1 && !canMerge) {
+      setError('Selected datasets have no common columns. Cannot merge for visualization.');
+      setIsAnalyzing(false);
       return;
     }
-
-    const start = Math.max(1, Math.min(rowStart || 1, table.rows.length));
-    const end = Math.max(start, Math.min(rowEnd || table.rows.length, table.rows.length));
-    const slice = table.rows.slice(start - 1, end);
-
-    const x = [];
-    const y = [];
-    slice.forEach((r) => {
-      const xv = r[xIndex] ?? '';
-      const yv = r[yIndex] ?? '';
-      const yNum = Number(yv);
-      if (Number.isFinite(yNum)) {
-        x.push(xv);
-        y.push(yNum);
+    
+    try {
+      const mergedData = mergeDatasets();
+      
+      if (!mergedData) {
+        setError('Failed to process datasets. Please check your selections.');
+        setIsAnalyzing(false);
+        return;
       }
-    });
-
-    if (!x.length || !y.length) {
-      setError('Selected Y column has no numeric values in the chosen range.');
-      return;
-    }
-
-    const payload = {
-      data: { x, y },
-      config: {
-        attributes,
-        selectedColumns: {
-          x: table.headers[xIndex],
-          y: table.headers[yIndex],
+      
+      const payload = {
+        mergedData,
+        config: {
+          selectedDatasets: selectedDatasetIds,
+          primaryKey: selectedPrimaryKey,
+          mergeMode,
+          datasetStats,
+          commonColumns: detectedCommonColumns
         },
-        hasHeader,
-        delimiter: usedDelimiter,
-        rowRange: [start, end],
-        fileName: fileName || '',
-      },
-    };
-    console.log('[WizardStep3] onUpdate payload ->', payload);
-    onUpdate(payload);
+        selectedDatasets: selectedDatasetIds,
+        primaryKey: selectedPrimaryKey,
+        commonColumns: detectedCommonColumns
+      };
+      
+      console.log('[WizardStep3] Sending payload:', payload);
+      onUpdate(payload);
+      
+    } catch (err) {
+      console.error('Error processing datasets:', err);
+      setError(`Error processing datasets: ${err.message}`);
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
 
   return (
     <div className="wizard-step">
-      <h3>Step 3: Configure Data Selection</h3>
-      {fileName && (
-        <div className="file-types-info">Using file: <strong>{fileName}</strong></div>
+      <div className="step-header">
+        <div className="step-icon">🎛️</div>
+        <div className="step-title">
+          <h3>Customize Data Selection</h3>
+          <p className="step-subtitle">Configure your datasets for optimal visualization</p>
+        </div>
+      </div>
+      
+      {datasets.length === 0 && (
+        <div className="empty-state">
+          <div className="empty-icon">📊</div>
+          <h4>No Datasets Available</h4>
+          <p>Please go back and upload your data files to continue.</p>
+          <button onClick={onBack} className="btn-secondary">← Upload Files</button>
+        </div>
       )}
-      {!fileContent && (
-        <div className="error-message">No file content available. Go back and upload a file.</div>
-      )}
-
-      <form id="wizard-step3-form" onSubmit={handleApply}>
-        {fileContent && (
-          <>
-            <div className="column-picker">
-              <label>
-                Delimiter
-                <select value={delimiter} onChange={(e) => setDelimiter(e.target.value)}>
-                  <option value="auto">Auto-detect ({usedDelimiter === '\t' ? 'Tab' : usedDelimiter})</option>
-                  <option value=",">Comma (,)</option>
-                  <option value="\t">Tab (\t)</option>
-                  <option value=";">Semicolon (;)</option>
-                  <option value="|">Pipe (|)</option>
-                </select>
-              </label>
-              <label>
-                Header row present
-                <select value={hasHeader ? 'yes' : 'no'} onChange={(e) => setHasHeader(e.target.value === 'yes')}>
-                  <option value="yes">Yes</option>
-                  <option value="no">No</option>
-                </select>
-              </label>
-              <label>
-                X column
-                <select value={xIndex} onChange={(e) => setXIndex(Number(e.target.value))}>
-                  {table.headers.map((h, i) => (
-                    <option key={i} value={i}>{h || `Column ${i + 1}`}</option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Y column (numeric)
-                <select value={yIndex} onChange={(e) => setYIndex(Number(e.target.value))}>
-                  {table.headers.map((h, i) => (
-                    <option key={i} value={i}>{h || `Column ${i + 1}`}</option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Row start (1-based)
-                <input
-                  type="number"
-                  min={1}
-                  max={Math.max(1, table.rows.length)}
-                  value={rowStart}
-                  onChange={(e) => setRowStart(Number(e.target.value))}
-                />
-              </label>
-              <label>
-                Row end
-                <input
-                  type="number"
-                  min={1}
-                  max={Math.max(1, table.rows.length)}
-                  value={rowEnd}
-                  onChange={(e) => setRowEnd(Number(e.target.value))}
-                />
-              </label>
-              <label>
-                Attributes (optional)
-                <input
-                  type="text"
-                  value={attributes}
-                  onChange={(e) => setAttributes(e.target.value)}
-                  placeholder="e.g., gene, variant"
-                />
-              </label>
+      
+      {datasets.length > 0 && (
+        <>
+          {/* Dataset Statistics */}
+          <div className="dataset-stats">
+            <div className="section-header">
+              <div className="section-icon">📈</div>
+              <h4>Dataset Overview</h4>
             </div>
-
-            {table.headers.length > 0 && (
-              <div className="preview-table-wrapper">
-                <table className="preview-table">
-                  <thead>
-                    <tr>
-                      {table.headers.map((h, i) => (
-                        <th key={i}>{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {previewRows.map((r, idx) => (
-                      <tr key={idx}>
-                        {table.headers.map((_, ci) => (
-                          <td key={ci}>{r[ci] ?? ''}</td>
+            <div className="stats-grid">
+              {Object.values(datasetStats).map((stat, index) => (
+                <div key={index} className="stat-card">
+                  <div className="stat-header">
+                    <div className="file-icon">📄</div>
+                    <strong className="file-name">{stat.fileName}</strong>
+                  </div>
+                  <div className="stat-metrics">
+                    <div className="metric">
+                      <span className="metric-value">{stat.rows.toLocaleString()}</span>
+                      <span className="metric-label">rows</span>
+                    </div>
+                    <div className="metric">
+                      <span className="metric-value">{stat.columns}</span>
+                      <span className="metric-label">columns</span>
+                    </div>
+                  </div>
+                  {stat.headers.length > 0 && (
+                    <div className="column-preview">
+                      <div className="column-tags">
+                        {stat.headers.slice(0, 6).map((header, i) => (
+                          <span key={i} className="column-tag">{header}</span>
                         ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                        {stat.headers.length > 6 && (
+                          <span className="column-tag more">+{stat.headers.length - 6} more</span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+          
+          {/* Dataset Selection */}
+          <div className="dataset-selection">
+            <div className="section-header">
+              <div className="section-icon">✅</div>
+              <h4>Select Datasets</h4>
+              <p className="section-subtitle">Choose which datasets to include in your visualization</p>
+            </div>
+            <div className="dataset-grid">
+              {datasets.map(dataset => (
+                <div 
+                  key={dataset.id} 
+                  className={`dataset-card ${selectedDatasetIds.includes(dataset.id) ? 'selected' : ''}`}
+                  onClick={() => handleDatasetToggle(dataset.id)}
+                >
+                  <div className="dataset-checkbox">
+                    <input
+                      type="checkbox"
+                      id={`dataset-${dataset.id}`}
+                      checked={selectedDatasetIds.includes(dataset.id)}
+                      onChange={() => handleDatasetToggle(dataset.id)}
+                    />
+                    <div className="checkbox-custom"></div>
+                  </div>
+                  <div className="dataset-content">
+                    <div className="dataset-header">
+                      <div className="file-icon">📊</div>
+                      <strong className="dataset-name">{dataset.fileName}</strong>
+                    </div>
+                    <div className="dataset-metrics">
+                      <div className="metric-badge">
+                        <span className="metric-number">{dataset.rowCount?.toLocaleString()}</span>
+                        <span className="metric-text">rows</span>
+                      </div>
+                      <div className="metric-badge">
+                        <span className="metric-number">{dataset.columnCount}</span>
+                        <span className="metric-text">cols</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="selection-indicator">
+                    {selectedDatasetIds.includes(dataset.id) && <span className="checkmark">✓</span>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          
+          {/* Common Columns Analysis */}
+          {selectedDatasetIds.length > 1 && (
+            <div className="relationship-analysis">
+              <div className="section-header">
+                <div className="section-icon">🔗</div>
+                <h4>Dataset Relationships</h4>
+                <p className="section-subtitle">Analysis of common columns for data merging</p>
               </div>
+              
+              {detectedCommonColumns.length > 0 ? (
+                <div className="analysis-success">
+                  <div className="success-banner">
+                    <div className="success-icon">🎉</div>
+                    <div className="success-content">
+                      <h5>Compatible Datasets Found!</h5>
+                      <p>Discovered {detectedCommonColumns.length} common column{detectedCommonColumns.length > 1 ? 's' : ''} for merging</p>
+                    </div>
+                  </div>
+                  
+                  <div className="common-columns-display">
+                    <h6>Common Columns:</h6>
+                    <div className="column-chips">
+                      {detectedCommonColumns.map(col => (
+                        <span key={col} className="column-chip">{col}</span>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  <div className="primary-key-selection">
+                    <label className="form-label">
+                      <span className="label-text">
+                        <span className="label-icon">🔑</span>
+                        Primary Key for Merging
+                      </span>
+                      <div className="select-wrapper">
+                        <select 
+                          value={selectedPrimaryKey} 
+                          onChange={(e) => setSelectedPrimaryKey(e.target.value)}
+                          className="form-select"
+                        >
+                          <option value="">Choose a primary key...</option>
+                          {detectedCommonColumns.map(col => (
+                            <option key={col} value={col}>{col}</option>
+                          ))}
+                        </select>
+                        <div className="select-arrow">▼</div>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+              ) : (
+                <div className="analysis-warning">
+                  <div className="warning-banner">
+                    <div className="warning-icon">⚠️</div>
+                    <div className="warning-content">
+                      <h5>No Common Columns Detected</h5>
+                      <p>Selected datasets cannot be merged. They will be visualized separately.</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+          
+          {/* Merge Mode Selection */}
+          {selectedDatasetIds.length > 0 && (
+            <div className="visualization-mode">
+              <div className="section-header">
+                <div className="section-icon">🎨</div>
+                <h4>Visualization Strategy</h4>
+                <p className="section-subtitle">Choose how to handle your selected datasets</p>
+              </div>
+              
+              <div className="mode-cards">
+                <div 
+                  className={`mode-card ${mergeMode === 'single' ? 'selected' : ''} ${selectedDatasetIds.length > 1 ? 'disabled' : ''}`}
+                  onClick={() => selectedDatasetIds.length === 1 && setMergeMode('single')}
+                >
+                  <div className="mode-icon">📊</div>
+                  <div className="mode-content">
+                    <h5>Single Dataset</h5>
+                    <p>Visualize one dataset independently</p>
+                  </div>
+                  <input
+                    type="radio"
+                    name="mergeMode"
+                    value="single"
+                    checked={mergeMode === 'single'}
+                    onChange={(e) => setMergeMode(e.target.value)}
+                    disabled={selectedDatasetIds.length > 1}
+                  />
+                </div>
+                
+                <div 
+                  className={`mode-card ${mergeMode === 'merge' ? 'selected' : ''} ${!canMerge ? 'disabled' : ''}`}
+                  onClick={() => canMerge && setMergeMode('merge')}
+                >
+                  <div className="mode-icon">🔗</div>
+                  <div className="mode-content">
+                    <h5>Merge Datasets</h5>
+                    <p>Combine datasets using common columns</p>
+                    {!canMerge && <span className="mode-requirement">Requires common columns</span>}
+                  </div>
+                  <input
+                    type="radio"
+                    name="mergeMode"
+                    value="merge"
+                    checked={mergeMode === 'merge'}
+                    onChange={(e) => setMergeMode(e.target.value)}
+                    disabled={!canMerge}
+                  />
+                </div>
+                
+                <div 
+                  className={`mode-card ${mergeMode === 'separate' ? 'selected' : ''}`}
+                  onClick={() => setMergeMode('separate')}
+                >
+                  <div className="mode-icon">📈</div>
+                  <div className="mode-content">
+                    <h5>Separate Visualization</h5>
+                    <p>Create individual visualizations for each dataset</p>
+                  </div>
+                  <input
+                    type="radio"
+                    name="mergeMode"
+                    value="separate"
+                    checked={mergeMode === 'separate'}
+                    onChange={(e) => setMergeMode(e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {/* Preview of selected datasets */}
+          {selectedDatasetObjects.length > 0 && (
+            <div className="dataset-preview">
+              <div className="section-header">
+                <div className="section-icon">👁️</div>
+                <h4>Data Preview</h4>
+                <p className="section-subtitle">Sample data from your selected datasets</p>
+              </div>
+              
+              <div className="preview-tabs">
+                {selectedDatasetObjects.map((dataset, index) => (
+                  <div key={dataset.id} className="preview-tab">
+                    <div className="tab-header">
+                      <div className="tab-icon">📋</div>
+                      <span className="tab-title">{dataset.fileName}</span>
+                      <span className="tab-badge">{dataset.rowCount} rows</span>
+                    </div>
+                    
+                    {dataset.headers && dataset.headers.length > 0 && (
+                      <div className="preview-content">
+                        <div className="table-container">
+                          <table className="preview-table">
+                            <thead>
+                              <tr>
+                                {dataset.headers.slice(0, 8).map((h, i) => (
+                                  <th key={i}>
+                                    <span className="header-text">{h}</span>
+                                    {detectedCommonColumns.includes(h) && (
+                                      <span className="common-indicator" title="Common column">🔗</span>
+                                    )}
+                                  </th>
+                                ))}
+                                {dataset.headers.length > 8 && (
+                                  <th className="more-columns">+{dataset.headers.length - 8} more</th>
+                                )}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {dataset.rows && dataset.rows.slice(0, 5).map((row, idx) => (
+                                <tr key={idx}>
+                                  {row.slice(0, 8).map((cell, ci) => (
+                                    <td key={ci}>
+                                      <span className="cell-content">{cell || '—'}</span>
+                                    </td>
+                                  ))}
+                                  {row.length > 8 && (
+                                    <td className="more-data">...</td>
+                                  )}
+                                </tr>
+                              ))}
+                              {(!dataset.rows || dataset.rows.length === 0) && (
+                                <tr>
+                                  <td colSpan={Math.min(dataset.headers.length, 8)} className="no-data">
+                                    No data available
+                                  </td>
+                                </tr>
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
+      )}
+      
+      {error && (
+        <div className="error-alert">
+          <div className="error-icon">❌</div>
+          <div className="error-content">
+            <h5>Configuration Error</h5>
+            <p>{error}</p>
+          </div>
+        </div>
+      )}
+      
+      <div className="action-bar">
+        <button onClick={onBack} className="btn-secondary">
+          <span className="btn-icon">←</span>
+          Back to Upload
+        </button>
+        
+        <div className="action-info">
+          <div className="selection-summary">
+            <span className="summary-text">
+              {selectedDatasetIds.length} dataset{selectedDatasetIds.length !== 1 ? 's' : ''} selected
+            </span>
+            {selectedDatasetIds.length > 1 && canMerge && (
+              <span className="merge-indicator">• Merge ready</span>
             )}
-          </>
-        )}
-      </form>
-
-      {error && <div className="error-message">{error}</div>}
-
-      <div className="nav-buttons">
-        <button onClick={onBack}>Back</button>
-        <button type="submit" form="wizard-step3-form" className="primary" disabled={isInitializing}>
-          {isInitializing ? 'Analyzing...' : 'Apply & Next'}
+          </div>
+        </div>
+        
+        <button 
+          onClick={handleApply} 
+          className={`btn-primary ${isAnalyzing ? 'loading' : ''}`}
+          disabled={isAnalyzing || selectedDatasetIds.length === 0}
+        >
+          {isAnalyzing ? (
+            <>
+              <div className="spinner"></div>
+              Processing...
+            </>
+          ) : (
+            <>
+              Configure & Continue
+              <span className="btn-icon">→</span>
+            </>
+          )}
         </button>
       </div>
     </div>

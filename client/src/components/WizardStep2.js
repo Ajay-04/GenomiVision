@@ -2,26 +2,97 @@ import React from 'react';
 
 const WizardStep2 = ({ onSelect, onBack }) => {
   const iconMap = {
-    genome_browser: '🧬',
-    circular_map: '⭕',
-    heatmap: '🔥',
+    // Basic Charts
     bar_chart: '📊',
+    line_chart: '📈',
+    scatter_plot: '🔵',
+    heatmap: '🔥',
+    
+    // Genomic Specific
+    genome_browser: '🧬',
+    manhattan_plot: '🏔️',
+    volcano_plot: '🌋',
+    lollipop_plot: '🍭',
+    circular_plot: '⭕',
+    coverage_plot: '📏',
+    
+    // Expression Analysis
+    box_plot: '📦',
+    violin_plot: '🎻',
+    pca_plot: '🎯',
+    tsne_plot: '🔄',
+    
+    // Variant Analysis
+    variant_heatmap: '🧩',
+    allele_frequency: '📊',
+    phylogenetic_tree: '🌳',
+    
+    // Time Series
+    time_series: '⏰',
+    stacked_area: '📊',
+    
+    // Geographic
+    geographic_map: '🗺️',
+    
+    // Quality Control
+    histogram: '📊',
+    density_plot: '🌊'
   };
-  const types = [
-    { id: 'genome_browser', name: 'Genome Browser' },
-    { id: 'circular_map', name: 'Circular Map' },
-    { id: 'heatmap', name: 'Heatmap' },
-    { id: 'bar_chart', name: 'Bar Chart' },
-  ];
+  
+  const categories = {
+    'Basic Visualizations': [
+      { id: 'bar_chart', name: 'Bar Chart', description: 'Compare categorical data' },
+      { id: 'line_chart', name: 'Line Chart', description: 'Show trends over time' },
+      { id: 'scatter_plot', name: 'Scatter Plot', description: 'Show relationships between variables' },
+      { id: 'heatmap', name: 'Heatmap', description: 'Show data intensity with colors' },
+      { id: 'histogram', name: 'Histogram', description: 'Show data distribution' }
+    ],
+    'Genomic Analysis': [
+      { id: 'genome_browser', name: 'Genome Browser', description: 'Browse genomic regions with tracks' },
+      { id: 'manhattan_plot', name: 'Manhattan Plot', description: 'GWAS results visualization' },
+      { id: 'volcano_plot', name: 'Volcano Plot', description: 'Differential expression analysis' },
+      { id: 'lollipop_plot', name: 'Lollipop Plot', description: 'Mutations along gene/protein' },
+      { id: 'circular_plot', name: 'Circos Plot', description: 'Circular genome visualization' },
+      { id: 'coverage_plot', name: 'Coverage Plot', description: 'Sequencing depth visualization' }
+    ],
+    'Expression Analysis': [
+      { id: 'box_plot', name: 'Box Plot', description: 'Distribution comparison' },
+      { id: 'violin_plot', name: 'Violin Plot', description: 'Enhanced distribution visualization' },
+      { id: 'pca_plot', name: 'PCA Plot', description: 'Principal component analysis' },
+      { id: 'tsne_plot', name: 't-SNE Plot', description: 'Dimensionality reduction clustering' }
+    ],
+    'Variant Analysis': [
+      { id: 'variant_heatmap', name: 'Variant Heatmap', description: 'Mutation presence/absence matrix' },
+      { id: 'allele_frequency', name: 'Allele Frequency', description: 'Variant frequency distribution' },
+      { id: 'phylogenetic_tree', name: 'Phylogenetic Tree', description: 'Evolutionary relationships' }
+    ],
+    'Temporal & Geographic': [
+      { id: 'time_series', name: 'Time Series', description: 'Changes over time' },
+      { id: 'stacked_area', name: 'Stacked Area Chart', description: 'Composition over time' },
+      { id: 'geographic_map', name: 'Geographic Map', description: 'Spatial distribution' }
+    ]
+  };
 
   return (
     <div className="wizard-step">
-      <h3>Step 2: Choose Visualization Type</h3>
-      <div className="type-options">
-        {types.map((type) => (
-          <div key={type.id} className="type-option" onClick={() => onSelect(type.id)}>
-            <div style={{ fontSize: '32px' }}>{iconMap[type.id] || '📈'}</div>
-            <span className='box-text'>{type.name}</span>
+      <h3>Step 3: Choose Visualization Type</h3>
+      <div className="visualization-categories">
+        {Object.entries(categories).map(([categoryName, types]) => (
+          <div key={categoryName} className="category-section">
+            <h4 className="category-title">{categoryName}</h4>
+            <div className="type-options">
+              {types.map((type) => (
+                <div key={type.id} className="type-option" onClick={() => onSelect(type.id)}>
+                  <div className="type-icon" style={{ fontSize: '32px' }}>
+                    {iconMap[type.id] || '📈'}
+                  </div>
+                  <div className="type-content">
+                    <span className="type-name">{type.name}</span>
+                    <span className="type-description">{type.description}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         ))}
       </div>

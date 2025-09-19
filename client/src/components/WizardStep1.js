@@ -3,7 +3,7 @@ import axios from 'axios';
 
 const WizardStep1 = ({ onUpload, onBack }) => {
   const [files, setFiles] = useState([]);
-  const [selectedIndex, setSelectedIndex] = useState(null);
+  const [selectedFiles, setSelectedFiles] = useState([]);
   const [isDragging, setIsDragging] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -52,9 +52,8 @@ const WizardStep1 = ({ onUpload, onBack }) => {
       merged = merged.slice(0, 3);
     }
     setFiles(merged);
-    if (merged.length && (selectedIndex === null || selectedIndex >= merged.length)) {
-      setSelectedIndex(0);
-    }
+    // Auto-select all valid files for multi-file processing
+    setSelectedFiles(merged.map((_, index) => index));
   };
 
   const handleFileChange = (e) => {
@@ -78,68 +77,69 @@ const WizardStep1 = ({ onUpload, onBack }) => {
 
   const handleClearFile = () => {
     setFiles([]);
-    setSelectedIndex(null);
+    setSelectedFiles([]);
     setError('');
   };
 
   const handleRemoveFile = (index) => {
     setFiles((prev) => {
       const next = prev.filter((_, i) => i !== index);
-      if (selectedIndex !== null) {
-        if (index === selectedIndex) {
-          setSelectedIndex(next.length ? 0 : null);
-        } else if (index < selectedIndex) {
-          setSelectedIndex(selectedIndex - 1);
-        }
-      }
+      // Update selected files indices
+      setSelectedFiles(prevSelected => 
+        prevSelected
+          .filter(i => i !== index)
+          .map(i => i > index ? i - 1 : i)
+      );
       return next;
     });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!files.length || selectedIndex === null) return;
-    const file = files[selectedIndex];
+    if (!files.length || selectedFiles.length === 0) return;
+    
     setIsLoading(true);
     setError('');
-    const formData = new FormData();
-    formData.append('file', file);
+    
+    const selectedFileObjects = selectedFiles.map(index => files[index]);
+    const fileContents = [];
 
     try {
-      const res = await axios.post('http://localhost:5000/api/data/upload', formData, {
-        withCredentials: true, 
-      });
-      console.log('Backend response:', res.data);
-      // Even on success, read local file content so downstream steps always
-      // receive a consistent shape: { name, content }
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        onUpload({ content: e.target.result, name: file.name });
-      };
-      reader.onerror = () => {
-        setError('Failed to read file content locally.');
-      };
-      reader.readAsText(file);
-    } catch (err) {
-      console.error('File upload error:', err);
-      let errorMessage = 'File upload failed. Please try again.';
-      if (err.response) {
-        errorMessage = `Upload failed: ${err.response.data.message || err.response.statusText} (Status: ${err.response.status})`;
-      } else if (err.request) {
-        errorMessage = 'Server not responding. Please ensure the backend is running at http://localhost:5000.';
-      } else {
-        errorMessage = `Error: ${err.message}`;
+      // Upload each selected file to backend
+      for (const file of selectedFileObjects) {
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        try {
+          const res = await axios.post('http://localhost:5000/api/data/upload', formData, {
+            withCredentials: true, 
+          });
+          console.log('Backend response for', file.name, ':', res.data);
+        } catch (err) {
+          console.warn('Backend upload failed for', file.name, '- continuing with local processing');
+        }
       }
-      setError(errorMessage);
-
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        onUpload({ content: e.target.result, name: file.name });
-      };
-      reader.onerror = () => {
-        setError('Failed to read file content locally.');
-      };
-      reader.readAsText(file);
+      
+      // Read all selected files locally
+      const readPromises = selectedFileObjects.map(file => {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            resolve({ content: e.target.result, name: file.name });
+          };
+          reader.onerror = () => {
+            reject(new Error(`Failed to read ${file.name}`));
+          };
+          reader.readAsText(file);
+        });
+      });
+      
+      const results = await Promise.all(readPromises);
+      onUpload(results);
+      
+    } catch (err) {
+      console.error('File processing error:', err);
+      setError(`Error processing files: ${err.message}`);
     } finally {
       setIsLoading(false);
     }
@@ -186,15 +186,21 @@ const WizardStep1 = ({ onUpload, onBack }) => {
               {files.map((f, idx) => (
                 <div key={f.name + idx} className="file-item">
                   <input
-                    className="file-radio"
-                    type="radio"
-                    name="selectedFile"
-                    id={`file-radio-${idx}`}
-                    checked={selectedIndex === idx}
-                    onChange={() => setSelectedIndex(idx)}
-                    title="Use this file for visualization"
+                    className="file-checkbox"
+                    type="checkbox"
+                    name="selectedFiles"
+                    id={`file-checkbox-${idx}`}
+                    checked={selectedFiles.includes(idx)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedFiles(prev => [...prev, idx]);
+                      } else {
+                        setSelectedFiles(prev => prev.filter(i => i !== idx));
+                      }
+                    }}
+                    title="Include this file for visualization"
                   />
-                  <label htmlFor={`file-radio-${idx}`} className="file-name">{f.name}</label>
+                  <label htmlFor={`file-checkbox-${idx}`} className="file-name">{f.name}</label>
                   <span className="chip file-size">{formatFileSize(f.size)}</span>
                   <button type="button" className="remove-btn" onClick={() => handleRemoveFile(idx)}>
                     Remove
@@ -203,7 +209,7 @@ const WizardStep1 = ({ onUpload, onBack }) => {
               ))}
             </div>
             <div className="file-help">
-              <em>Select one file above to use for visualization.</em>
+              <em>Select up to 3 files above to use for visualization. Files with common columns can be merged.</em>
             </div>
             <button type="button" className="clear-btn" onClick={handleClearFile}>
               Clear all
@@ -212,8 +218,8 @@ const WizardStep1 = ({ onUpload, onBack }) => {
         )}
         <div className="file-types-info">Select up to 3 files. Supported: .fasta, .bed, .vcf, .gtf, .csv</div>
         {error && <div className="error-message">{error}</div>}
-        <button type="submit" disabled={!files.length || selectedIndex === null || isLoading} className={isLoading ? 'loading' : ''}>
-          {isLoading ? 'Uploading...' : 'Upload'}
+        <button type="submit" disabled={!files.length || selectedFiles.length === 0 || isLoading} className={isLoading ? 'loading' : ''}>
+          {isLoading ? 'Processing...' : `Process ${selectedFiles.length} file${selectedFiles.length !== 1 ? 's' : ''}`}
           {isLoading && <span />}
         </button>
       </form>
