@@ -202,7 +202,8 @@ const WizardStep3 = ({ onUpdate, onBack, datasets = [], selectedDatasets = [], c
         },
         selectedDatasets: selectedDatasetIds,
         primaryKey: selectedPrimaryKey,
-        commonColumns: detectedCommonColumns
+        commonColumns: detectedCommonColumns,
+        mergeMode
       };
       
       console.log('[WizardStep3] Sending payload:', payload);

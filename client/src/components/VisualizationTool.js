@@ -4,6 +4,7 @@ import Navbar from './Navbar';
 import WizardStep1 from './WizardStep1';
 import WizardStep2 from './WizardStep2';
 import WizardStep3 from './WizardStep3';
+import WizardStepColumnSelection from './WizardStepColumnSelection';
 import WizardStep4 from './WizardStep4';
 import Plotly from 'plotly.js';
 import '../styles/visualization.css';
@@ -19,13 +20,17 @@ const VisualizationTool = () => {
   const [error, setError] = useState('');
   const [commonColumns, setCommonColumns] = useState([]);
   const [primaryKey, setPrimaryKey] = useState('');
+  const [selectedColumns, setSelectedColumns] = useState({});
+  const [mergeMode, setMergeMode] = useState('single');
+  const [processedDatasets, setProcessedDatasets] = useState([]);
   const plotRef = useRef(null);
 
   const steps = [
     { name: 'Upload Data', id: 1 },
     { name: 'Customize', id: 2 },
-    { name: 'Choose Type', id: 3 },
-    { name: 'Visualize', id: 4 },
+    { name: 'Select Columns', id: 3 },
+    { name: 'Choose Type', id: 4 },
+    { name: 'Visualize', id: 5 },
   ];
 
   const colorPalette = [
@@ -170,7 +175,7 @@ const VisualizationTool = () => {
 
   const handleTypeSelect = (type) => {
     setVisualizationType(type.replace('_', ' '));
-    setStep(4);
+    setStep(5);
   };
 
   const handleConfigUpdate = (payload) => {
@@ -180,11 +185,35 @@ const VisualizationTool = () => {
       if (payload.selectedDatasets) setSelectedDatasets(payload.selectedDatasets);
       if (payload.primaryKey) setPrimaryKey(payload.primaryKey);
       if (payload.commonColumns) setCommonColumns(payload.commonColumns);
+      if (payload.mergeMode) setMergeMode(payload.mergeMode);
       if (!payload.mergedData && !payload.config) setConfig(payload);
     } else {
       setConfig(payload);
     }
     setStep(3);
+  };
+
+  const handleColumnSelection = (payload) => {
+    if (payload && typeof payload === 'object') {
+      if (payload.processedDatasets) setProcessedDatasets(payload.processedDatasets);
+      if (payload.selectedColumns) setSelectedColumns(payload.selectedColumns);
+      if (payload.commonColumns) setCommonColumns(payload.commonColumns);
+      if (payload.mergeMode) setMergeMode(payload.mergeMode);
+      if (payload.config) setConfig(prev => ({ ...prev, ...payload.config }));
+      
+      // Create merged data from processed datasets
+      if (payload.processedDatasets && payload.processedDatasets.length > 0) {
+        const firstDataset = payload.processedDatasets[0];
+        setMergedData({
+          x: firstDataset.x || [],
+          y: firstDataset.y || [],
+          headers: firstDataset.headers || [],
+          rows: firstDataset.rows || [],
+          processedDatasets: payload.processedDatasets
+        });
+      }
+    }
+    setStep(4);
   };
 
   const handleExport = (format) => {
@@ -259,40 +288,70 @@ export(p, file = "visualization.png")
   };
 
   const renderVisualization = async (targetRef, dataToRender) => {
-    if (step !== 4 || !visualizationType || !dataToRender || !targetRef.current) return;
+    if (step !== 5 || !visualizationType || !dataToRender || !targetRef.current) return;
 
     const plotDiv = targetRef.current;
     let plotData = [];
+    
+    // Enhanced data processing for selected columns
+    let x, y, xAxisTitle, yAxisTitle;
+    
+    if (dataToRender.processedDatasets && dataToRender.processedDatasets.length > 0) {
+      // Use processed datasets with selected columns
+      const primaryDataset = dataToRender.processedDatasets[0];
+      x = primaryDataset.x || [];
+      y = primaryDataset.y || [];
+      xAxisTitle = primaryDataset.headers?.[0] || 'X-axis';
+      yAxisTitle = primaryDataset.headers?.[1] || 'Y-axis';
+      
+      // For multiple datasets, we might want to show them separately or merged
+      if (dataToRender.processedDatasets.length > 1 && mergeMode === 'separate') {
+        // Handle multiple datasets separately - we'll create multiple traces
+        plotData = dataToRender.processedDatasets.map((dataset, index) => ({
+          x: dataset.x || [],
+          y: dataset.y || [],
+          name: dataset.fileName || `Dataset ${index + 1}`,
+          type: visualizationType === 'bar chart' ? 'bar' : 'scatter',
+          marker: { color: colorPalette[index % colorPalette.length] }
+        }));
+      }
+    } else {
+      // Fallback to original data structure
+      x = dataToRender.x || ['GeneA', 'GeneB', 'GeneC'];
+      y = dataToRender.y || [10, 25, 15];
+      xAxisTitle = dataToRender.headers?.[0] || config.attributes || 'X-axis';
+      yAxisTitle = dataToRender.headers?.[1] || 'Y-axis';
+    }
+
     let layout = {
       ...config,
-      title: 'Genomic Visualization',
-      xaxis: { title: config.attributes || 'X-axis', tickfont: { size: 14 } },
-      yaxis: { title: 'Y-axis', tickfont: { size: 14 } },
+      title: `Genomic Visualization - ${visualizationType}`,
+      xaxis: { title: xAxisTitle, tickfont: { size: 14 } },
+      yaxis: { title: yAxisTitle, tickfont: { size: 14 } },
       plot_bgcolor: '#f9f9f9',
       paper_bgcolor: '#fff',
       font: { size: 14, color: '#2A3547' },
       width: 800,
       height: 500,
-      showlegend: false,
+      showlegend: plotData.length > 1, // Show legend for multiple datasets
     };
 
-    const x = dataToRender.x || ['GeneA', 'GeneB', 'GeneC'];
-    const y = dataToRender.y || [10, 25, 15];
-
-    switch (visualizationType) {
-      case 'bar chart':
-        plotData = [{
-          x: x,
-          y: y,
-          type: 'bar',
-          marker: {
-            color: x.map((_, i) => colorPalette[i % colorPalette.length]),
-            line: { width: 2, color: '#000' },
-          },
-          text: y.map(val => val.toString()),
-          textposition: 'auto',
-        }];
-        break;
+    // Only create plotData if it hasn't been populated for multiple datasets
+    if (plotData.length === 0) {
+      switch (visualizationType) {
+        case 'bar chart':
+          plotData = [{
+            x: x,
+            y: y,
+            type: 'bar',
+            marker: {
+              color: x.map((_, i) => colorPalette[i % colorPalette.length]),
+              line: { width: 2, color: '#000' },
+            },
+            text: y.map(val => val.toString()),
+            textposition: 'auto',
+          }];
+          break;
 
       case 'line chart':
         plotData = [{
@@ -643,6 +702,7 @@ export(p, file = "visualization.png")
             line: { width: 2, color: '#000' },
           }
         }];
+      }
     }
 
     await Plotly.newPlot(plotDiv, plotData, layout, { displayModeBar: true, responsive: true });
@@ -651,6 +711,11 @@ export(p, file = "visualization.png")
   useEffect(() => {
     renderVisualization(plotRef, mergedData);
   }, [step, mergedData, visualizationType, config]);
+
+  // Scroll to top whenever step changes
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [step]);
 
   const handleBack = () => {
     setStep((prev) => Math.max(1, prev - 1));
@@ -688,8 +753,18 @@ export(p, file = "visualization.png")
             primaryKey={primaryKey}
           />
         )}
-        {step === 3 && <WizardStep2 onSelect={handleTypeSelect} onBack={handleBack} />}
-        {step === 4 && (
+        {step === 3 && (
+          <WizardStepColumnSelection
+            onUpdate={handleColumnSelection}
+            onBack={handleBack}
+            datasets={datasets}
+            selectedDatasets={selectedDatasets}
+            commonColumns={commonColumns}
+            mergeMode={mergeMode}
+          />
+        )}
+        {step === 4 && <WizardStep2 onSelect={handleTypeSelect} onBack={handleBack} />}
+        {step === 5 && (
           <div>
             <WizardStep4 onExport={handleExport} onBack={handleBack} plotRef={plotRef} />
             <h3>Total Visualization</h3>
