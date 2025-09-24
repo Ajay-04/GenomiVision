@@ -209,14 +209,14 @@ const WizardStep1 = ({ onUpload, onBack }) => {
               ))}
             </div>
             <div className="file-help">
-              <em>Select up to 3 files above to use for visualization. Files with common columns can be merged.</em>
+              <em>Select 1-3 files above to use for visualization. Single files work perfectly! Files with common columns can be merged.</em>
             </div>
             <button type="button" className="clear-btn" onClick={handleClearFile}>
               Clear all
             </button>
           </div>
         )}
-        <div className="file-types-info">Select up to 3 files. Supported: .fasta, .bed, .vcf, .gtf, .csv</div>
+        <div className="file-types-info">Select 1-3 files (single file works great!). Supported: .fasta, .bed, .vcf, .gtf, .csv</div>
         {error && <div className="error-message">{error}</div>}
         <button type="submit" disabled={!files.length || selectedFiles.length === 0 || isLoading} className={isLoading ? 'loading' : ''}>
           {isLoading ? 'Processing...' : `Process ${selectedFiles.length} file${selectedFiles.length !== 1 ? 's' : ''}`}

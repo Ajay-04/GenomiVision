@@ -15,6 +15,33 @@
   --danger: #dc3545;
 }
 
+/* Enhanced visualization container */
+#plot {
+  width: 100% !important;
+  max-width: 1200px !important;
+  height: 700px !important;
+  margin: 2rem auto !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  border: 1px solid #e0e0e0;
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow);
+  background: var(--white);
+  padding: 1rem;
+}
+
+/* Make the plotly container responsive and centered */
+.js-plotly-plot {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.plot-container {
+  width: 100% !important;
+  height: 100% !important;
+}
+
 .visualization-tool {
   background: var(--white);
   padding-top: calc(var(--navbar-height) + var(--padding));
@@ -56,7 +83,7 @@
   border-radius: var(--border-radius);
   box-shadow: var(--shadow);
   margin: 1rem auto;
-  max-width: 900px;
+  max-width: 1200px;
   border: 1px solid #e0e0e0;
   animation: fadeIn 0.5s ease-in;
 }
