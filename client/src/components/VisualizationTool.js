@@ -402,7 +402,11 @@ export(p, file = "visualization.png")
         
         // Create a realistic gene expression matrix
         const matrix = [];
-        const geneNames = x.slice(0, numGenes).map((name, i) => `Gene_${i + 1}`);
+        const geneNames = x.slice(0, numGenes).map((name, i) => {
+          // Ensure gene names are fully visible by truncating if too long
+          const geneName = name.length > 15 ? name.substring(0, 12) + '...' : name;
+          return geneName || `Gene_${i + 1}`;
+        });
         const sampleNames = Array.from({length: numSamples}, (_, i) => `Sample_${i + 1}`);
         
         for (let i = 0; i < numGenes; i++) {
@@ -433,32 +437,38 @@ export(p, file = "visualization.png")
           showscale: true,
           colorbar: {
             title: 'Expression Level',
-            titleside: 'right'
+            titleside: 'right',
+            len: 0.8
           },
           hovertemplate: 'Gene: %{y}<br>Sample: %{x}<br>Expression: %{z:.3f}<extra></extra>'
         }];
         
-        // Update layout for clustering appearance
+        // Update layout for clustering appearance with better margins
         layout = {
           ...layout,
           title: 'Gene Expression Heatmap with Clustering',
           xaxis: {
             title: 'Samples',
             side: 'bottom',
-            tickangle: -45
+            tickangle: -45,
+            tickfont: { size: 12 },
+            automargin: true
           },
           yaxis: {
             title: 'Genes',
-            side: 'left'
+            side: 'left',
+            tickfont: { size: 12 },
+            automargin: true
           },
-          width: 900,
-          height: 700,
+          width: 1100,
+          height: 800,
           margin: {
-            l: 100,
-            r: 100,
+            l: 150,  // Increased left margin for gene names
+            r: 120,  // Increased right margin for colorbar
             t: 100,
-            b: 100
-          }
+            b: 120   // Increased bottom margin for sample names
+          },
+          font: { size: 12 }
         };
         break;
 
@@ -887,9 +897,9 @@ export(p, file = "visualization.png")
         {step === 4 && <WizardStep2 onSelect={handleTypeSelect} onBack={handleBack} />}
         {step === 5 && (
           <div>
-            <WizardStep4 onExport={handleExport} onBack={handleBack} plotRef={plotRef} />
             <h3>Total Visualization</h3>
             <div id="plot" ref={plotRef}></div>
+            <WizardStep4 onExport={handleExport} onBack={handleBack} plotRef={plotRef} />
             <button
               className="custom-viz-button"
               onClick={handleCustomVisualizationRedirect}

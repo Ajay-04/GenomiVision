@@ -53,7 +53,7 @@ const Dashboard = () => {
       description: 'Track visualizations created and files uploaded.',
       buttonText: 'View All',
       buttonClass: 'button-outline-primary',
-      onClick: () => alert('Recent activity coming soon!'),
+      onClick: () => navigate('/recent-activity'),
     },
     {
       title: 'Project Management',

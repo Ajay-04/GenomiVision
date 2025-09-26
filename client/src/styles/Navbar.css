@@ -17,6 +17,38 @@
   --sidenav-width: 172.8px; /* 192px * 0.9 */
 }
 
+/* Notification Badge */
+
+.notification-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background: #dc3545;
+  color: white;
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  font-size: 0.7rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  border: 2px solid white;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(220, 53, 69, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(220, 53, 69, 0);
+  }
+}
+
 .main-header {
   position: relative;
 }
@@ -80,6 +112,7 @@
 
 .navbar-item {
   margin-left: 0.72rem; /* 0.8rem * 0.9 */
+  position: relative;
 }
 
 .navbar-link {

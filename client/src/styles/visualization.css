@@ -18,8 +18,9 @@
 /* Enhanced visualization container */
 #plot {
   width: 100% !important;
-  max-width: 1200px !important;
-  height: 700px !important;
+  max-width: 1300px !important;
+  height: auto !important;
+  min-height: 700px !important;
   margin: 2rem auto !important;
   display: flex !important;
   justify-content: center !important;
@@ -29,6 +30,7 @@
   box-shadow: var(--shadow);
   background: var(--white);
   padding: 1rem;
+  overflow: auto;
 }
 
 /* Make the plotly container responsive and centered */
@@ -952,6 +954,9 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 1rem;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .dataset-card {
@@ -965,6 +970,10 @@
   display: flex;
   align-items: center;
   gap: 1rem;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .dataset-card:hover {
@@ -1015,6 +1024,8 @@
 
 .dataset-content {
   flex: 1;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .dataset-header {
@@ -1022,11 +1033,16 @@
   align-items: center;
   gap: 0.5rem;
   margin-bottom: 0.75rem;
+  width: 100%;
 }
 
 .dataset-name {
   color: #2A3547;
   font-size: 1rem;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
+  max-width: 100%;
 }
 
 .dataset-metrics {

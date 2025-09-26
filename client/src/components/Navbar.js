@@ -3,11 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import '../styles/Navbar.css';
 import logo from '../assets/logo.jpg';
+import Notifications from './Notifications';
 
 const Navbar = () => {
   const navigate = useNavigate();
   const [sidenavOpen, setSidenavOpen] = useState(false);
   const [user, setUser] = useState(null);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
 
   useEffect(() => {
     const fetchUserEmail = async () => {
@@ -126,36 +128,16 @@ const Navbar = () => {
           <button className="sidenav-toggle" onClick={toggleSidenav}>
             <i className="fas fa-bars"></i>
           </button>
-          <form className="search-form">
-            <input type="search" className="search-input" placeholder="Search datasets..." />
-            <span className="search-icon">
-              <i className="fas fa-search"></i>
-            </span>
-          </form>
           <ul className="navbar-links">
             <li className="navbar-item">
               <a
                 className="navbar-link"
                 href="#"
-                title="Create Visualization"
-                onClick={() => alert('Apps coming soon!')}
-              >
-                <i className="fas fa-video"></i>
-              </a>
-            </li>
-            <li className="navbar-item">
-              <a className="navbar-link" href="#" title="Apps" onClick={() => alert('Apps coming soon!')}>
-                <i className="fas fa-th"></i>
-              </a>
-            </li>
-            <li className="navbar-item">
-              <a
-                className="navbar-link"
-                href="#"
                 title="Notifications"
-                onClick={() => alert('Notifications coming soon!')}
+                onClick={() => setNotificationsOpen(true)}
               >
                 <i className="fas fa-bell"></i>
+                <span className="notification-badge">2</span>
               </a>
             </li>
             <li className="navbar-item dropdown">
@@ -178,7 +160,7 @@ const Navbar = () => {
                       </div>
                     </li>
                     <li>
-                      <a className="dropdown-item" href="#" onClick={() => alert('Profile coming soon!')}>
+                      <a className="dropdown-item" href="#" onClick={() => navigate('/profile')}>
                         <i className="fas fa-user-circle"></i> Profile
                       </a>
                     </li>
@@ -210,6 +192,10 @@ const Navbar = () => {
           </ul>
         </div>
       </nav>
+      <Notifications 
+        isOpen={notificationsOpen} 
+        onClose={() => setNotificationsOpen(false)} 
+      />
     </header>
   );
 };

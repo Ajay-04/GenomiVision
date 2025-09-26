@@ -6,6 +6,8 @@ import VisualizationTool from './components/VisualizationTool';
 import ResetPassword from './components/ResetPassword';
 import History from './pages/History';
 import CustomVisualizationPage from './pages/CustomVisualizationPage';
+import Profile from './components/Profile';
+import RecentActivity from './components/RecentActivity';
 import Navbar from './components/Navbar'; // Add Navbar
 
 const ProtectedRoute = ({ children }) => {
@@ -24,6 +26,8 @@ function App() {
         <Route path="/visualization" element={<ProtectedRoute><VisualizationTool /></ProtectedRoute>} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/history" element={<History />} />
+        <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+        <Route path="/recent-activity" element={<ProtectedRoute><RecentActivity /></ProtectedRoute>} />
         <Route path="/custom-visualization" element={<CustomVisualizationPage />} />
         <Route path="/" element={<Navigate to="/auth" />} />
         <Route path="*" element={<div>404: Page Not Found</div>} />
