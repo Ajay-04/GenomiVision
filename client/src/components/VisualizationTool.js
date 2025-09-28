@@ -293,16 +293,50 @@ export(p, file = "visualization.png")
     const plotDiv = targetRef.current;
     let plotData = [];
     
-    // Enhanced data processing for selected columns
+    // Enhanced data processing for selected columns - ensure ALL columns are utilized
     let x, y, xAxisTitle, yAxisTitle;
+    let allSelectedColumns = [];
+    let additionalData = {};
     
     if (dataToRender.processedDatasets && dataToRender.processedDatasets.length > 0) {
       // Use processed datasets with selected columns
       const primaryDataset = dataToRender.processedDatasets[0];
+      const headers = primaryDataset.headers || [];
+      const rows = primaryDataset.rows || [];
+      
       x = primaryDataset.x || [];
       y = primaryDataset.y || [];
-      xAxisTitle = primaryDataset.headers?.[0] || 'X-axis';
-      yAxisTitle = primaryDataset.headers?.[1] || 'Y-axis';
+      xAxisTitle = headers[0] || 'X-axis';
+      yAxisTitle = headers[1] || 'Y-axis';
+      
+      // Extract ALL selected columns for utilization
+      allSelectedColumns = headers;
+      
+      // Map additional columns to different visual encodings
+      if (headers.length > 2) {
+        additionalData.z = rows.map(row => parseFloat(row[2]) || 0);
+        additionalData.zTitle = headers[2];
+      }
+      if (headers.length > 3) {
+        additionalData.color = rows.map(row => parseFloat(row[3]) || 0);
+        additionalData.colorTitle = headers[3];
+      }
+      if (headers.length > 4) {
+        additionalData.size = rows.map(row => Math.max(parseFloat(row[4]) || 5, 3));
+        additionalData.sizeTitle = headers[4];
+      }
+      if (headers.length > 5) {
+        // Additional columns for hover information
+        additionalData.hover = rows.map((row, i) => {
+          let hoverText = `Point ${i + 1}<br>`;
+          headers.forEach((header, j) => {
+            if (j < row.length) {
+              hoverText += `${header}: ${row[j]}<br>`;
+            }
+          });
+          return hoverText;
+        });
+      }
       
       // For multiple datasets, we might want to show them separately or merged
       if (dataToRender.processedDatasets.length > 1 && mergeMode === 'separate') {
@@ -331,8 +365,14 @@ export(p, file = "visualization.png")
       plot_bgcolor: '#f9f9f9',
       paper_bgcolor: '#fff',
       font: { size: 14, color: '#2A3547' },
-      width: 1000,
-      height: 700,
+      autosize: true,
+      margin: {
+        l: 80,
+        r: 80,
+        t: 100,
+        b: 80,
+        pad: 4
+      },
       showlegend: plotData.length > 1, // Show legend for multiple datasets
     };
 
@@ -340,39 +380,126 @@ export(p, file = "visualization.png")
     if (plotData.length === 0) {
       switch (visualizationType) {
         case 'bar chart':
+          // Enhanced bar chart utilizing additional columns
+          let barMarker = {
+            line: { width: 2, color: '#000' }
+          };
+          
+          let barText = y.map(val => val.toString());
+          let barHover = x.map((label, i) => `${label}<br>Value: ${y[i]}`);
+          
+          // Use additional columns for color mapping
+          if (additionalData.color && additionalData.color.length > 0) {
+            barMarker.color = additionalData.color;
+            barMarker.colorscale = 'Viridis';
+            barMarker.showscale = true;
+            barMarker.colorbar = {
+              title: additionalData.colorTitle || 'Color Scale'
+            };
+            barHover = x.map((label, i) => 
+              `${label}<br>Value: ${y[i]}<br>${additionalData.colorTitle}: ${additionalData.color[i].toFixed(2)}`
+            );
+          } else {
+            barMarker.color = x.map((_, i) => colorPalette[i % colorPalette.length]);
+          }
+          
+          // Use comprehensive hover text if available
+          if (additionalData.hover && additionalData.hover.length > 0) {
+            barHover = additionalData.hover;
+          }
+          
           plotData = [{
             x: x,
             y: y,
             type: 'bar',
-            marker: {
-              color: x.map((_, i) => colorPalette[i % colorPalette.length]),
-              line: { width: 2, color: '#000' },
-            },
-            text: y.map(val => val.toString()),
+            marker: barMarker,
+            text: barText,
             textposition: 'auto',
+            hovertemplate: '%{hovertext}<extra></extra>',
+            hovertext: barHover
           }];
           break;
 
       case 'line chart':
+        // Enhanced line chart utilizing additional columns
+        let lineMarker = { size: 8 };
+        let lineConfig = { width: 3 };
+        let lineHover = x.map((label, i) => `${label}<br>Value: ${y[i]}`);
+        
+        // Use additional columns for color mapping
+        if (additionalData.color && additionalData.color.length > 0) {
+          lineMarker.color = additionalData.color;
+          lineMarker.colorscale = 'Viridis';
+          lineMarker.showscale = true;
+          lineMarker.colorbar = {
+            title: additionalData.colorTitle || 'Color Scale'
+          };
+          lineConfig.color = colorPalette[0]; // Keep line solid color
+          lineHover = x.map((label, i) => 
+            `${label}<br>Value: ${y[i]}<br>${additionalData.colorTitle}: ${additionalData.color[i].toFixed(2)}`
+          );
+        } else {
+          lineMarker.color = colorPalette[0];
+          lineConfig.color = colorPalette[0];
+        }
+        
+        // Use size mapping if available
+        if (additionalData.size && additionalData.size.length > 0) {
+          lineMarker.size = additionalData.size;
+          lineHover = x.map((label, i) => 
+            `${label}<br>Value: ${y[i]}<br>${additionalData.colorTitle || 'Color'}: ${(additionalData.color?.[i] || 0).toFixed(2)}<br>${additionalData.sizeTitle}: ${additionalData.size[i].toFixed(2)}`
+          );
+        }
+        
+        // Use comprehensive hover text if available
+        if (additionalData.hover && additionalData.hover.length > 0) {
+          lineHover = additionalData.hover;
+        }
+        
         plotData = [{
           x: x,
           y: y,
           type: 'scatter',
           mode: 'lines+markers',
-          marker: { color: colorPalette[0], size: 8 },
-          line: { color: colorPalette[0], width: 3 }
+          marker: lineMarker,
+          line: lineConfig,
+          hovertemplate: '%{hovertext}<extra></extra>',
+          hovertext: lineHover
         }];
         break;
 
       case 'scatter plot':
-        // Enhanced scatter plot with Z-coordinate support
-        let zValues = [];
-        if (dataToRender.processedDatasets && dataToRender.processedDatasets[0] && dataToRender.processedDatasets[0].headers && dataToRender.processedDatasets[0].headers.length > 2) {
-          // Use third column as Z-coordinate if available
-          zValues = dataToRender.processedDatasets[0].rows.map(row => parseFloat(row[2]) || 0);
-        } else {
-          // Generate random Z values for demonstration
-          zValues = y.map(() => Math.random() * 100);
+        // Enhanced scatter plot utilizing ALL selected columns
+        let scatterMarker = {
+          size: 12,
+          line: { width: 1, color: '#000' }
+        };
+        
+        let scatterText = x.map((label, i) => `${label}<br>X: ${x[i]}<br>Y: ${y[i]}`);
+        
+        // Utilize additional columns for enhanced visualization
+        if (additionalData.color && additionalData.color.length > 0) {
+          scatterMarker.color = additionalData.color;
+          scatterMarker.colorscale = 'Viridis';
+          scatterMarker.showscale = true;
+          scatterMarker.colorbar = {
+            title: additionalData.colorTitle || 'Color Scale'
+          };
+          scatterText = x.map((label, i) => 
+            `${label}<br>X: ${x[i]}<br>Y: ${y[i]}<br>${additionalData.colorTitle}: ${additionalData.color[i].toFixed(2)}`
+          );
+        }
+        
+        if (additionalData.size && additionalData.size.length > 0) {
+          scatterMarker.size = additionalData.size;
+          scatterText = x.map((label, i) => 
+            `${label}<br>X: ${x[i]}<br>Y: ${y[i]}<br>${additionalData.colorTitle || 'Color'}: ${(additionalData.color?.[i] || 0).toFixed(2)}<br>${additionalData.sizeTitle}: ${additionalData.size[i].toFixed(2)}`
+          );
+        }
+        
+        // Use comprehensive hover text if available
+        if (additionalData.hover && additionalData.hover.length > 0) {
+          scatterText = additionalData.hover;
         }
         
         plotData = [{
@@ -380,17 +507,8 @@ export(p, file = "visualization.png")
           y: y,
           type: 'scatter',
           mode: 'markers',
-          marker: {
-            color: zValues,
-            colorscale: 'Viridis',
-            size: 12,
-            line: { width: 1, color: '#000' },
-            showscale: true,
-            colorbar: {
-              title: dataToRender.processedDatasets?.[0]?.headers?.[2] || 'Z-Value'
-            }
-          },
-          text: x.map((label, i) => `${label}<br>X: ${x[i]}<br>Y: ${y[i]}<br>Z: ${zValues[i].toFixed(2)}`),
+          marker: scatterMarker,
+          text: scatterText,
           hovertemplate: '%{text}<extra></extra>'
         }];
         break;
@@ -822,6 +940,437 @@ export(p, file = "visualization.png")
         };
         break;
 
+      // 3D VISUALIZATIONS
+      case 'scatter 3d':
+        // Enhanced 3D scatter plot with automatic column mapping
+        let z3d = [];
+        let color3d = [];
+        let size3d = [];
+        let hoverText3d = [];
+        
+        if (dataToRender.processedDatasets && dataToRender.processedDatasets[0]) {
+          const dataset = dataToRender.processedDatasets[0];
+          const rows = dataset.rows || [];
+          const headers = dataset.headers || [];
+          
+          // Map first 3 numeric columns to X, Y, Z
+          z3d = rows.map(row => parseFloat(row[2]) || 0);
+          
+          // Map additional columns to color, size, hover
+          if (headers.length > 3) {
+            color3d = rows.map(row => parseFloat(row[3]) || 0);
+          }
+          if (headers.length > 4) {
+            size3d = rows.map(row => Math.max(parseFloat(row[4]) || 5, 3));
+          }
+          
+          // Create hover text with all column information
+          hoverText3d = rows.map((row, i) => {
+            let text = `Point ${i + 1}<br>`;
+            headers.forEach((header, j) => {
+              if (j < row.length) {
+                text += `${header}: ${row[j]}<br>`;
+              }
+            });
+            return text;
+          });
+        } else {
+          // Fallback data
+          z3d = y.map(() => Math.random() * 100);
+          color3d = y.map(() => Math.random() * 100);
+          size3d = y.map(() => Math.random() * 20 + 5);
+          hoverText3d = x.map((label, i) => `${label}<br>X: ${x[i]}<br>Y: ${y[i]}<br>Z: ${z3d[i].toFixed(2)}`);
+        }
+        
+        plotData = [{
+          x: x,
+          y: y,
+          z: z3d,
+          type: 'scatter3d',
+          mode: 'markers',
+          marker: {
+            size: size3d.length > 0 ? size3d : 8,
+            color: color3d.length > 0 ? color3d : colorPalette[0],
+            colorscale: 'Viridis',
+            showscale: color3d.length > 0,
+            colorbar: color3d.length > 0 ? {
+              title: dataToRender.processedDatasets?.[0]?.headers?.[3] || 'Color Scale'
+            } : undefined,
+            line: { width: 0.5, color: 'rgba(0,0,0,0.3)' }
+          },
+          text: hoverText3d,
+          hovertemplate: '%{text}<extra></extra>'
+        }];
+        
+        layout = {
+          ...layout,
+          scene: {
+            xaxis: { title: dataToRender.processedDatasets?.[0]?.headers?.[0] || 'X-axis' },
+            yaxis: { title: dataToRender.processedDatasets?.[0]?.headers?.[1] || 'Y-axis' },
+            zaxis: { title: dataToRender.processedDatasets?.[0]?.headers?.[2] || 'Z-axis' },
+            camera: { eye: { x: 1.5, y: 1.5, z: 1.5 } }
+          },
+          title: '3D Scatter Plot - Interactive Genomic Data'
+        };
+        break;
+
+      case 'bubble 3d':
+        // 3D Bubble scatter with size mapping for 4th dimension
+        let zBubble = [];
+        let sizeBubble = [];
+        let colorBubble = [];
+        let hoverBubble = [];
+        
+        if (dataToRender.processedDatasets && dataToRender.processedDatasets[0]) {
+          const dataset = dataToRender.processedDatasets[0];
+          const rows = dataset.rows || [];
+          const headers = dataset.headers || [];
+          
+          zBubble = rows.map(row => parseFloat(row[2]) || 0);
+          sizeBubble = rows.map(row => Math.max(parseFloat(row[3]) || 5, 3) * 2); // Size from 4th column
+          
+          if (headers.length > 4) {
+            colorBubble = rows.map(row => parseFloat(row[4]) || 0);
+          }
+          
+          hoverBubble = rows.map((row, i) => {
+            let text = `Bubble ${i + 1}<br>`;
+            headers.forEach((header, j) => {
+              if (j < row.length) {
+                text += `${header}: ${row[j]}<br>`;
+              }
+            });
+            return text;
+          });
+        } else {
+          zBubble = y.map(() => Math.random() * 100);
+          sizeBubble = y.map(() => Math.random() * 30 + 10);
+          colorBubble = y.map(() => Math.random() * 100);
+          hoverBubble = x.map((label, i) => `${label}<br>Size: ${sizeBubble[i].toFixed(1)}`);
+        }
+        
+        plotData = [{
+          x: x,
+          y: y,
+          z: zBubble,
+          type: 'scatter3d',
+          mode: 'markers',
+          marker: {
+            size: sizeBubble,
+            color: colorBubble.length > 0 ? colorBubble : colorPalette[0],
+            colorscale: 'Plasma',
+            showscale: true,
+            colorbar: {
+              title: dataToRender.processedDatasets?.[0]?.headers?.[4] || 'Color Value'
+            },
+            opacity: 0.8,
+            line: { width: 1, color: 'rgba(0,0,0,0.5)' }
+          },
+          text: hoverBubble,
+          hovertemplate: '%{text}<extra></extra>'
+        }];
+        
+        layout = {
+          ...layout,
+          scene: {
+            xaxis: { title: dataToRender.processedDatasets?.[0]?.headers?.[0] || 'X-axis' },
+            yaxis: { title: dataToRender.processedDatasets?.[0]?.headers?.[1] || 'Y-axis' },
+            zaxis: { title: dataToRender.processedDatasets?.[0]?.headers?.[2] || 'Z-axis' },
+            camera: { eye: { x: 1.5, y: 1.5, z: 1.5 } }
+          },
+          title: '3D Bubble Plot - Multi-dimensional Genomic Analysis'
+        };
+        break;
+
+      case 'surface 3d':
+        // 3D Surface plot for continuous data visualization
+        const gridSize = Math.ceil(Math.sqrt(x.length));
+        const surfaceZ = [];
+        
+        // Create a grid for surface plot
+        for (let i = 0; i < gridSize; i++) {
+          const row = [];
+          for (let j = 0; j < gridSize; j++) {
+            const index = i * gridSize + j;
+            if (index < y.length) {
+              row.push(y[index]);
+            } else {
+              // Interpolate or use nearby values
+              row.push(y[y.length - 1] + Math.random() * 10 - 5);
+            }
+          }
+          surfaceZ.push(row);
+        }
+        
+        plotData = [{
+          z: surfaceZ,
+          type: 'surface',
+          colorscale: 'Viridis',
+          showscale: true,
+          colorbar: {
+            title: 'Expression Level'
+          },
+          contours: {
+            z: {
+              show: true,
+              usecolormap: true,
+              highlightcolor: "#42f462",
+              project: { z: true }
+            }
+          }
+        }];
+        
+        layout = {
+          ...layout,
+          scene: {
+            xaxis: { title: 'X Coordinate' },
+            yaxis: { title: 'Y Coordinate' },
+            zaxis: { title: dataToRender.processedDatasets?.[0]?.headers?.[1] || 'Z Value' },
+            camera: { eye: { x: 1.87, y: 0.88, z: -0.64 } }
+          },
+          title: '3D Surface Plot - Expression Landscape'
+        };
+        break;
+
+      case 'mesh 3d':
+        // 3D Mesh plot for cluster visualization
+        let xMesh = [], yMesh = [], zMesh = [];
+        let iMesh = [], jMesh = [], kMesh = [];
+        
+        if (dataToRender.processedDatasets && dataToRender.processedDatasets[0]) {
+          const dataset = dataToRender.processedDatasets[0];
+          const rows = dataset.rows || [];
+          
+          xMesh = rows.map(row => parseFloat(row[0]) || 0);
+          yMesh = rows.map(row => parseFloat(row[1]) || 0);
+          zMesh = rows.map(row => parseFloat(row[2]) || 0);
+          
+          // Create triangular mesh indices
+          for (let i = 0; i < Math.min(rows.length - 2, 50); i += 3) {
+            iMesh.push(i, i + 1, i + 2);
+            jMesh.push(i + 1, i + 2, i);
+            kMesh.push(i + 2, i, i + 1);
+          }
+        } else {
+          // Generate sample mesh data
+          for (let i = 0; i < x.length; i++) {
+            xMesh.push(i);
+            yMesh.push(y[i]);
+            zMesh.push(Math.random() * 50);
+          }
+          
+          for (let i = 0; i < Math.min(x.length - 2, 20); i += 3) {
+            iMesh.push(i, i + 1, i + 2);
+            jMesh.push(i + 1, i + 2, i);
+            kMesh.push(i + 2, i, i + 1);
+          }
+        }
+        
+        plotData = [{
+          type: 'mesh3d',
+          x: xMesh,
+          y: yMesh,
+          z: zMesh,
+          i: iMesh,
+          j: jMesh,
+          k: kMesh,
+          colorscale: 'Portland',
+          intensity: zMesh,
+          showscale: true,
+          colorbar: {
+            title: 'Intensity'
+          },
+          opacity: 0.7
+        }];
+        
+        layout = {
+          ...layout,
+          scene: {
+            xaxis: { title: 'X Coordinate' },
+            yaxis: { title: 'Y Coordinate' },
+            zaxis: { title: 'Z Coordinate' },
+            camera: { eye: { x: 1.5, y: 1.5, z: 1.5 } }
+          },
+          title: '3D Mesh Plot - Cluster Visualization'
+        };
+        break;
+
+      case 'volume 3d':
+        // 3D Volume plot for voxel-based rendering
+        const volumeSize = Math.ceil(Math.cbrt(x.length));
+        const volumeData = [];
+        
+        // Create 3D volume data
+        for (let i = 0; i < volumeSize; i++) {
+          for (let j = 0; j < volumeSize; j++) {
+            for (let k = 0; k < volumeSize; k++) {
+              const index = i * volumeSize * volumeSize + j * volumeSize + k;
+              const value = index < y.length ? y[index] : Math.random() * 50;
+              volumeData.push([i, j, k, value]);
+            }
+          }
+        }
+        
+        plotData = [{
+          type: 'volume',
+          x: volumeData.map(d => d[0]),
+          y: volumeData.map(d => d[1]),
+          z: volumeData.map(d => d[2]),
+          value: volumeData.map(d => d[3]),
+          isomin: Math.min(...volumeData.map(d => d[3])),
+          isomax: Math.max(...volumeData.map(d => d[3])),
+          opacity: 0.1,
+          surface_count: 15,
+          colorscale: 'RdYlBu',
+          showscale: true,
+          colorbar: {
+            title: 'Density'
+          }
+        }];
+        
+        layout = {
+          ...layout,
+          scene: {
+            xaxis: { title: 'X Voxel' },
+            yaxis: { title: 'Y Voxel' },
+            zaxis: { title: 'Z Voxel' },
+            camera: { eye: { x: 1.5, y: 1.5, z: 1.5 } }
+          },
+          title: '3D Volume Plot - Density Visualization'
+        };
+        break;
+
+      case 'line 3d':
+        // 3D Line/Trajectory plot for temporal data
+        let xLine3d = [], yLine3d = [], zLine3d = [];
+        let hoverLine3d = [];
+        
+        if (dataToRender.processedDatasets && dataToRender.processedDatasets[0]) {
+          const dataset = dataToRender.processedDatasets[0];
+          const rows = dataset.rows || [];
+          
+          xLine3d = rows.map((row, i) => parseFloat(row[0]) || i);
+          yLine3d = rows.map(row => parseFloat(row[1]) || 0);
+          zLine3d = rows.map(row => parseFloat(row[2]) || 0);
+          
+          hoverLine3d = rows.map((row, i) => {
+            return `Time Point ${i + 1}<br>X: ${xLine3d[i]}<br>Y: ${yLine3d[i]}<br>Z: ${zLine3d[i]}`;
+          });
+        } else {
+          xLine3d = x.map((_, i) => i);
+          yLine3d = y;
+          zLine3d = y.map(() => Math.random() * 50);
+          hoverLine3d = x.map((label, i) => `${label}<br>Time: ${i}<br>Value: ${y[i]}`);
+        }
+        
+        plotData = [{
+          x: xLine3d,
+          y: yLine3d,
+          z: zLine3d,
+          type: 'scatter3d',
+          mode: 'lines+markers',
+          line: {
+            color: colorPalette[0],
+            width: 6
+          },
+          marker: {
+            size: 5,
+            color: zLine3d,
+            colorscale: 'Viridis',
+            showscale: true,
+            colorbar: {
+              title: 'Trajectory Value'
+            }
+          },
+          text: hoverLine3d,
+          hovertemplate: '%{text}<extra></extra>'
+        }];
+        
+        layout = {
+          ...layout,
+          scene: {
+            xaxis: { title: 'Time/Sequence' },
+            yaxis: { title: dataToRender.processedDatasets?.[0]?.headers?.[1] || 'Y Value' },
+            zaxis: { title: dataToRender.processedDatasets?.[0]?.headers?.[2] || 'Z Value' },
+            camera: { eye: { x: 1.5, y: 1.5, z: 1.5 } }
+          },
+          title: '3D Trajectory Plot - Temporal Evolution'
+        };
+        break;
+
+      case 'network 3d':
+        // 3D Network visualization for gene/protein networks
+        const numNodes = Math.min(x.length, 20);
+        const nodes = [];
+        const edges = [];
+        
+        // Create nodes in 3D space
+        for (let i = 0; i < numNodes; i++) {
+          nodes.push({
+            x: Math.random() * 100 - 50,
+            y: Math.random() * 100 - 50,
+            z: Math.random() * 100 - 50,
+            name: x[i] || `Node${i}`,
+            value: y[i] || Math.random() * 100
+          });
+        }
+        
+        // Create edges between nodes
+        const edgeTraces = [];
+        for (let i = 0; i < numNodes; i++) {
+          for (let j = i + 1; j < numNodes; j++) {
+            if (Math.random() < 0.3) { // 30% chance of connection
+              edgeTraces.push({
+                x: [nodes[i].x, nodes[j].x, null],
+                y: [nodes[i].y, nodes[j].y, null],
+                z: [nodes[i].z, nodes[j].z, null],
+                type: 'scatter3d',
+                mode: 'lines',
+                line: { color: 'rgba(125,125,125,0.5)', width: 2 },
+                showlegend: false,
+                hoverinfo: 'none'
+              });
+            }
+          }
+        }
+        
+        // Node trace
+        const nodeTrace = {
+          x: nodes.map(n => n.x),
+          y: nodes.map(n => n.y),
+          z: nodes.map(n => n.z),
+          type: 'scatter3d',
+          mode: 'markers+text',
+          marker: {
+            size: nodes.map(n => Math.max(n.value / Math.max(...nodes.map(n => n.value)) * 20, 5)),
+            color: nodes.map(n => n.value),
+            colorscale: 'Viridis',
+            showscale: true,
+            colorbar: {
+              title: 'Node Value'
+            },
+            line: { width: 1, color: 'rgba(0,0,0,0.5)' }
+          },
+          text: nodes.map(n => n.name),
+          textposition: 'top center',
+          hovertemplate: 'Node: %{text}<br>Value: %{marker.color}<extra></extra>'
+        };
+        
+        plotData = [...edgeTraces, nodeTrace];
+        
+        layout = {
+          ...layout,
+          scene: {
+            xaxis: { title: 'X Position', showgrid: false },
+            yaxis: { title: 'Y Position', showgrid: false },
+            zaxis: { title: 'Z Position', showgrid: false },
+            camera: { eye: { x: 1.5, y: 1.5, z: 1.5 } }
+          },
+          title: '3D Network Visualization - Gene/Protein Interactions',
+          showlegend: false
+        };
+        break;
+
       default:
         // Default to bar chart
         plotData = [{
@@ -836,7 +1385,12 @@ export(p, file = "visualization.png")
       }
     }
 
-    await Plotly.newPlot(plotDiv, plotData, layout, { displayModeBar: true, responsive: true });
+    await Plotly.newPlot(plotDiv, plotData, layout, { 
+      displayModeBar: true, 
+      responsive: true,
+      displaylogo: false,
+      modeBarButtonsToRemove: ['pan2d', 'lasso2d', 'select2d']
+    });
   };
 
   useEffect(() => {

@@ -36,7 +36,16 @@ const WizardStep2 = ({ onSelect, onBack }) => {
     
     // Quality Control
     histogram: '📊',
-    density_plot: '🌊'
+    density_plot: '🌊',
+    
+    // 3D Visualizations
+    scatter_3d: '🔮',
+    bubble_3d: '🫧',
+    surface_3d: '🏔️',
+    mesh_3d: '🕸️',
+    volume_3d: '📦',
+    line_3d: '🌀',
+    network_3d: '🕷️'
   };
   
   const categories = {
@@ -70,6 +79,15 @@ const WizardStep2 = ({ onSelect, onBack }) => {
       { id: 'time_series', name: 'Time Series', description: 'Changes over time' },
       { id: 'stacked_area', name: 'Stacked Area Chart', description: 'Composition over time' },
       { id: 'geographic_map', name: 'Geographic Map', description: 'Spatial distribution' }
+    ],
+    '3D Visualizations': [
+      { id: 'scatter_3d', name: '3D Scatter Plot', description: 'Three-dimensional scatter with X, Y, Z axes' },
+      { id: 'bubble_3d', name: '3D Bubble Scatter', description: '3D scatter with size mapping for 4th dimension' },
+      { id: 'surface_3d', name: '3D Surface Plot', description: 'Continuous surface visualization in 3D space' },
+      { id: 'mesh_3d', name: '3D Mesh Plot', description: '3D hulls and surfaces around data clusters' },
+      { id: 'volume_3d', name: '3D Volume Plot', description: 'Voxel-based 3D rendering for density data' },
+      { id: 'line_3d', name: '3D Line/Trajectory Plot', description: 'Temporal evolution in 3D space' },
+      { id: 'network_3d', name: '3D Network Visualization', description: 'Gene/protein networks in 3D space' }
     ]
   };
 

@@ -19,29 +19,44 @@
 #plot {
   width: 100% !important;
   max-width: 1300px !important;
-  height: auto !important;
-  min-height: 700px !important;
+  height: 700px !important;
   margin: 2rem auto !important;
-  display: flex !important;
-  justify-content: center !important;
-  align-items: center !important;
   border: 1px solid #e0e0e0;
   border-radius: var(--border-radius);
   box-shadow: var(--shadow);
   background: var(--white);
   padding: 1rem;
-  overflow: auto;
 }
 
 /* Make the plotly container responsive and centered */
 .js-plotly-plot {
-  width: 100% !important;
+  max-width: 100% !important;
   height: 100% !important;
 }
 
 .plot-container {
+  max-width: 100% !important;
+  height: 100% !important;
+}
+
+/* Ensure plotly plots don't overflow */
+.js-plotly-plot .plotly {
   width: 100% !important;
   height: 100% !important;
+}
+
+/* Responsive adjustments for smaller screens */
+@media (max-width: 768px) {
+  #plot {
+    max-width: 100% !important;
+    margin: 1rem auto !important;
+    padding: 0.5rem;
+  }
+  
+  .visualization-tool {
+    margin-left: 0;
+    padding: 1rem;
+  }
 }
 
 .visualization-tool {
