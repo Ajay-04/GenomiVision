@@ -297,6 +297,53 @@ app.post('/api/uploads', authenticateUser, async (req, res) => {
   }
 });
 
+// Get user statistics endpoint
+app.get('/api/users/stats', authenticateUser, async (req, res) => {
+  try {
+    const userId = req.session.userId;
+    const userEmail = req.session.user.email;
+
+    // Get visualization count from Firebase uploads (where visualizations are actually saved)
+    let visualizationCount = 0;
+    let historyCount = 0;
+    let fileUploadCount = 0;
+    
+    try {
+      const uploadsSnapshot = await db.ref('uploads').once('value');
+      const uploadsData = uploadsSnapshot.val();
+
+      if (uploadsData) {
+        Object.values(uploadsData).forEach(upload => {
+          // Count visualizations (uploads with image data)
+          if (upload.email === userEmail && upload.image) {
+            visualizationCount++;
+          }
+          // Count file uploads (uploads with userId)
+          if (upload.userId === userId) {
+            fileUploadCount++;
+          }
+        });
+      }
+      
+      // History count is same as visualization count
+      historyCount = visualizationCount;
+      
+    } catch (firebaseErr) {
+      console.error('Firebase error:', firebaseErr);
+      // Fallback to 0 if Firebase is not available
+    }
+
+    res.json({
+      visualizationCount,
+      fileUploadCount,
+      historyCount
+    });
+  } catch (err) {
+    console.error('Error fetching user stats:', err);
+    res.status(500).json({ message: 'Failed to fetch user statistics' });
+  }
+});
+
 // Proxy Groq Chat Completions via server-side API key (more secure)
 app.post('/api/groq/chat', authenticateUser, async (req, res) => {
   try {

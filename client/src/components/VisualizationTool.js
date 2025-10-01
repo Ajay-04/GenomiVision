@@ -408,6 +408,49 @@ export(p, file = "visualization.png")
           // Use comprehensive hover text if available
           if (additionalData.hover && additionalData.hover.length > 0) {
             barHover = additionalData.hover;
+          } else {
+            // Ensure we show all selected columns from multiple datasets in hover
+            if (dataToRender.processedDatasets && dataToRender.processedDatasets[0]) {
+              const dataset = dataToRender.processedDatasets[0];
+              const rows = dataset.rows || [];
+              const headers = dataset.headers || [];
+              
+              barHover = rows.map((row, i) => {
+                let text = `${headers[0] || 'Point'}: ${row[0] || i + 1}<br>`;
+                let usedHeaders = new Set();
+                
+                // Add the first column to used headers to prevent duplicates
+                usedHeaders.add(headers[0]);
+                
+                // Show all selected columns from the current dataset (skip first column as it's already shown)
+                headers.forEach((header, j) => {
+                  if (j < row.length && j > 0 && !usedHeaders.has(header)) {
+                    text += `${header}: ${row[j]}<br>`;
+                    usedHeaders.add(header);
+                  }
+                });
+                
+                // Add data from other datasets if available (avoid duplicates)
+                if (dataToRender.processedDatasets && dataToRender.processedDatasets.length > 1) {
+                  dataToRender.processedDatasets.forEach((otherDataset, datasetIndex) => {
+                    if (datasetIndex > 0 && otherDataset.rows && otherDataset.rows[i]) {
+                      const otherRow = otherDataset.rows[i];
+                      const otherHeaders = otherDataset.headers || [];
+                      
+                      // Add columns from other datasets (only if not already shown)
+                      otherHeaders.forEach((header, j) => {
+                        if (j < otherRow.length && otherRow[j] !== undefined && otherRow[j] !== '' && !usedHeaders.has(header)) {
+                          text += `${header}: ${otherRow[j]}<br>`;
+                          usedHeaders.add(header);
+                        }
+                      });
+                    }
+                  });
+                }
+                
+                return text;
+              });
+            }
           }
           
           plotData = [{
@@ -456,6 +499,49 @@ export(p, file = "visualization.png")
         // Use comprehensive hover text if available
         if (additionalData.hover && additionalData.hover.length > 0) {
           lineHover = additionalData.hover;
+        } else {
+          // Ensure we show all selected columns from multiple datasets in hover
+          if (dataToRender.processedDatasets && dataToRender.processedDatasets[0]) {
+            const dataset = dataToRender.processedDatasets[0];
+            const rows = dataset.rows || [];
+            const headers = dataset.headers || [];
+            
+            lineHover = rows.map((row, i) => {
+              let text = `${headers[0] || 'Point'}: ${row[0] || i + 1}<br>`;
+              let usedHeaders = new Set();
+              
+              // Add the first column to used headers to prevent duplicates
+              usedHeaders.add(headers[0]);
+              
+              // Show all selected columns from the current dataset (skip first column as it's already shown)
+              headers.forEach((header, j) => {
+                if (j < row.length && j > 0 && !usedHeaders.has(header)) {
+                  text += `${header}: ${row[j]}<br>`;
+                  usedHeaders.add(header);
+                }
+              });
+              
+              // Add data from other datasets if available (avoid duplicates)
+              if (dataToRender.processedDatasets && dataToRender.processedDatasets.length > 1) {
+                dataToRender.processedDatasets.forEach((otherDataset, datasetIndex) => {
+                  if (datasetIndex > 0 && otherDataset.rows && otherDataset.rows[i]) {
+                    const otherRow = otherDataset.rows[i];
+                    const otherHeaders = otherDataset.headers || [];
+                    
+                    // Add columns from other datasets (only if not already shown)
+                    otherHeaders.forEach((header, j) => {
+                      if (j < otherRow.length && otherRow[j] !== undefined && otherRow[j] !== '' && !usedHeaders.has(header)) {
+                        text += `${header}: ${otherRow[j]}<br>`;
+                        usedHeaders.add(header);
+                      }
+                    });
+                  }
+                });
+              }
+              
+              return text;
+            });
+          }
         }
         
         plotData = [{
@@ -502,6 +588,49 @@ export(p, file = "visualization.png")
         // Use comprehensive hover text if available
         if (additionalData.hover && additionalData.hover.length > 0) {
           scatterText = additionalData.hover;
+        } else {
+          // Ensure we show all selected columns from multiple datasets in hover
+          if (dataToRender.processedDatasets && dataToRender.processedDatasets[0]) {
+            const dataset = dataToRender.processedDatasets[0];
+            const rows = dataset.rows || [];
+            const headers = dataset.headers || [];
+            
+            scatterText = rows.map((row, i) => {
+              let text = `${headers[0] || 'Point'}: ${row[0] || i + 1}<br>`;
+              let usedHeaders = new Set();
+              
+              // Add the first column to used headers to prevent duplicates
+              usedHeaders.add(headers[0]);
+              
+              // Show all selected columns from the current dataset (skip first column as it's already shown)
+              headers.forEach((header, j) => {
+                if (j < row.length && j > 0 && !usedHeaders.has(header)) {
+                  text += `${header}: ${row[j]}<br>`;
+                  usedHeaders.add(header);
+                }
+              });
+              
+              // Add data from other datasets if available (avoid duplicates)
+              if (dataToRender.processedDatasets && dataToRender.processedDatasets.length > 1) {
+                dataToRender.processedDatasets.forEach((otherDataset, datasetIndex) => {
+                  if (datasetIndex > 0 && otherDataset.rows && otherDataset.rows[i]) {
+                    const otherRow = otherDataset.rows[i];
+                    const otherHeaders = otherDataset.headers || [];
+                    
+                    // Add columns from other datasets (only if not already shown)
+                    otherHeaders.forEach((header, j) => {
+                      if (j < otherRow.length && otherRow[j] !== undefined && otherRow[j] !== '' && !usedHeaders.has(header)) {
+                        text += `${header}: ${otherRow[j]}<br>`;
+                        usedHeaders.add(header);
+                      }
+                    });
+                  }
+                });
+              }
+              
+              return text;
+            });
+          }
         }
         
         plotData = [{
@@ -777,17 +906,38 @@ export(p, file = "visualization.png")
         // Simulate PCA data
         const pc1 = y.map((val, i) => val + Math.random() * 2 - 1);
         const pc2 = y.map((val, i) => val * 0.5 + Math.random() * 2 - 1);
+        
+        // Create hover text with selected columns
+        let pcaHoverText = [];
+        if (dataToRender.processedDatasets && dataToRender.processedDatasets[0]) {
+          const dataset = dataToRender.processedDatasets[0];
+          const rows = dataset.rows || [];
+          const headers = dataset.headers || [];
+          
+          pcaHoverText = rows.map((row, i) => {
+            let text = `Point ${i + 1}<br>`;
+            headers.forEach((header, j) => {
+              if (j < row.length) {
+                text += `${header}: ${row[j]}<br>`;
+              }
+            });
+            return text;
+          });
+        } else {
+          pcaHoverText = x.map((label, i) => `${label}<br>PC1: ${pc1[i].toFixed(2)}<br>PC2: ${pc2[i].toFixed(2)}`);
+        }
+        
         plotData = [{
           x: pc1,
           y: pc2,
           type: 'scatter',
-          mode: 'markers+text',
-          text: x,
-          textposition: 'top center',
+          mode: 'markers',
           marker: {
             color: x.map((_, i) => colorPalette[i % colorPalette.length]),
             size: 12
-          }
+          },
+          hovertext: pcaHoverText,
+          hovertemplate: '%{hovertext}<extra></extra>'
         }];
         layout.xaxis.title = 'PC1';
         layout.yaxis.title = 'PC2';
@@ -797,17 +947,38 @@ export(p, file = "visualization.png")
         // Simulate t-SNE data
         const tsne1 = y.map(() => Math.random() * 20 - 10);
         const tsne2 = y.map(() => Math.random() * 20 - 10);
+        
+        // Create hover text with selected columns
+        let tsneHoverText = [];
+        if (dataToRender.processedDatasets && dataToRender.processedDatasets[0]) {
+          const dataset = dataToRender.processedDatasets[0];
+          const rows = dataset.rows || [];
+          const headers = dataset.headers || [];
+          
+          tsneHoverText = rows.map((row, i) => {
+            let text = `Point ${i + 1}<br>`;
+            headers.forEach((header, j) => {
+              if (j < row.length) {
+                text += `${header}: ${row[j]}<br>`;
+              }
+            });
+            return text;
+          });
+        } else {
+          tsneHoverText = x.map((label, i) => `${label}<br>t-SNE 1: ${tsne1[i].toFixed(2)}<br>t-SNE 2: ${tsne2[i].toFixed(2)}`);
+        }
+        
         plotData = [{
           x: tsne1,
           y: tsne2,
           type: 'scatter',
-          mode: 'markers+text',
-          text: x,
-          textposition: 'top center',
+          mode: 'markers',
           marker: {
             color: x.map((_, i) => colorPalette[i % colorPalette.length]),
             size: 10
-          }
+          },
+          hovertext: tsneHoverText,
+          hovertemplate: '%{hovertext}<extra></extra>'
         }];
         layout.xaxis.title = 't-SNE 1';
         layout.yaxis.title = 't-SNE 2';
@@ -944,8 +1115,8 @@ export(p, file = "visualization.png")
 
       // 3D VISUALIZATIONS
       case 'scatter 3d':
-        // Enhanced 3D scatter plot with automatic column mapping
-        let z3d = [];
+        // Enhanced 3D scatter plot with proper 3D positioning
+        let x3d = [], y3d = [], z3d = [];
         let color3d = [];
         let size3d = [];
         let hoverText3d = [];
@@ -955,7 +1126,9 @@ export(p, file = "visualization.png")
           const rows = dataset.rows || [];
           const headers = dataset.headers || [];
           
-          // Map first 3 numeric columns to X, Y, Z
+          // Map first 3 numeric columns to X, Y, Z with proper 3D distribution
+          x3d = rows.map((row, i) => parseFloat(row[0]) || i * 10);
+          y3d = rows.map((row, i) => parseFloat(row[1]) || i * 5);
           z3d = rows.map(row => parseFloat(row[2]) || 0);
           
           // Map additional columns to color, size, hover
@@ -966,27 +1139,57 @@ export(p, file = "visualization.png")
             size3d = rows.map(row => Math.max(parseFloat(row[4]) || 5, 3));
           }
           
-          // Create hover text with all column information
+          // Create hover text with names and all column information from multiple datasets
           hoverText3d = rows.map((row, i) => {
-            let text = `Point ${i + 1}<br>`;
+            let text = `${headers[0] || 'Point'}: ${row[0] || i + 1}<br>`;
+            let usedHeaders = new Set();
+            
+            // Add the first column to used headers to prevent duplicates
+            usedHeaders.add(headers[0]);
+            
+            // Show all selected columns from the current dataset (skip first column as it's already shown)
             headers.forEach((header, j) => {
-              if (j < row.length) {
+              if (j < row.length && j > 0 && !usedHeaders.has(header)) {
                 text += `${header}: ${row[j]}<br>`;
+                usedHeaders.add(header);
               }
             });
+            
+            // Add data from other datasets if available (avoid duplicates)
+            if (dataToRender.processedDatasets && dataToRender.processedDatasets.length > 1) {
+              dataToRender.processedDatasets.forEach((dataset, datasetIndex) => {
+                if (datasetIndex > 0 && dataset.rows && dataset.rows[i]) {
+                  const otherRow = dataset.rows[i];
+                  const otherHeaders = dataset.headers || [];
+                  
+                  // Add columns from other datasets (only if not already shown)
+                  otherHeaders.forEach((header, j) => {
+                    if (j < otherRow.length && otherRow[j] !== undefined && otherRow[j] !== '' && !usedHeaders.has(header)) {
+                      text += `${header}: ${otherRow[j]}<br>`;
+                      usedHeaders.add(header);
+                    }
+                  });
+                }
+              });
+            }
+            
             return text;
           });
         } else {
-          // Fallback data
-          z3d = y.map(() => Math.random() * 100);
+          // Fallback data with proper 3D distribution
+          x3d = x.map((_, i) => i * 10 + Math.random() * 5);
+          y3d = y.map((val, i) => val + Math.random() * 10);
+          z3d = y.map((val, i) => val * 0.5 + Math.random() * 20);
           color3d = y.map(() => Math.random() * 100);
           size3d = y.map(() => Math.random() * 20 + 5);
-          hoverText3d = x.map((label, i) => `${label}<br>X: ${x[i]}<br>Y: ${y[i]}<br>Z: ${z3d[i].toFixed(2)}`);
+          hoverText3d = x.map((label, i) => 
+            `${label}<br>X: ${x3d[i].toFixed(2)}<br>Y: ${y3d[i].toFixed(2)}<br>Z: ${z3d[i].toFixed(2)}`
+          );
         }
         
         plotData = [{
-          x: x,
-          y: y,
+          x: x3d,
+          y: y3d,
           z: z3d,
           type: 'scatter3d',
           mode: 'markers',
@@ -1017,8 +1220,8 @@ export(p, file = "visualization.png")
         break;
 
       case 'bubble 3d':
-        // 3D Bubble scatter with size mapping for 4th dimension
-        let zBubble = [];
+        // 3D Bubble scatter with proper 3D positioning and size mapping
+        let xBubble = [], yBubble = [], zBubble = [];
         let sizeBubble = [];
         let colorBubble = [];
         let hoverBubble = [];
@@ -1028,32 +1231,71 @@ export(p, file = "visualization.png")
           const rows = dataset.rows || [];
           const headers = dataset.headers || [];
           
+          // Map first 3 numeric columns to X, Y, Z with proper 3D distribution
+          xBubble = rows.map((row, i) => parseFloat(row[0]) || i * 15);
+          yBubble = rows.map((row, i) => parseFloat(row[1]) || i * 8);
           zBubble = rows.map(row => parseFloat(row[2]) || 0);
-          sizeBubble = rows.map(row => Math.max(parseFloat(row[3]) || 5, 3) * 2); // Size from 4th column
+          
+          // Size from 4th column (or use Y values if only 3 columns)
+          sizeBubble = rows.map(row => Math.max(parseFloat(row[3]) || parseFloat(row[1]) || 5, 3) * 3);
           
           if (headers.length > 4) {
             colorBubble = rows.map(row => parseFloat(row[4]) || 0);
+          } else if (headers.length > 3) {
+            colorBubble = rows.map(row => parseFloat(row[3]) || 0);
           }
           
+          // Create hover text with names and all column information from multiple datasets
           hoverBubble = rows.map((row, i) => {
-            let text = `Bubble ${i + 1}<br>`;
+            let text = `${headers[0] || 'Bubble'}: ${row[0] || i + 1}<br>`;
+            let usedHeaders = new Set();
+            
+            // Add the first column to used headers to prevent duplicates
+            usedHeaders.add(headers[0]);
+            
+            // Show all selected columns from the current dataset (skip first column as it's already shown)
             headers.forEach((header, j) => {
-              if (j < row.length) {
+              if (j < row.length && j > 0 && !usedHeaders.has(header)) {
                 text += `${header}: ${row[j]}<br>`;
+                usedHeaders.add(header);
               }
             });
+            
+            // Add data from other datasets if available (avoid duplicates)
+            if (dataToRender.processedDatasets && dataToRender.processedDatasets.length > 1) {
+              dataToRender.processedDatasets.forEach((dataset, datasetIndex) => {
+                if (datasetIndex > 0 && dataset.rows && dataset.rows[i]) {
+                  const otherRow = dataset.rows[i];
+                  const otherHeaders = dataset.headers || [];
+                  
+                  // Add columns from other datasets (only if not already shown)
+                  otherHeaders.forEach((header, j) => {
+                    if (j < otherRow.length && otherRow[j] !== undefined && otherRow[j] !== '' && !usedHeaders.has(header)) {
+                      text += `${header}: ${otherRow[j]}<br>`;
+                      usedHeaders.add(header);
+                    }
+                  });
+                }
+              });
+            }
+            
             return text;
           });
         } else {
-          zBubble = y.map(() => Math.random() * 100);
-          sizeBubble = y.map(() => Math.random() * 30 + 10);
+          // Fallback data with proper 3D distribution
+          xBubble = x.map((_, i) => i * 15 + Math.random() * 8);
+          yBubble = y.map((val, i) => val + Math.random() * 15);
+          zBubble = y.map((val, i) => val * 0.7 + Math.random() * 25);
+          sizeBubble = y.map(val => Math.max(val * 0.3, 5));
           colorBubble = y.map(() => Math.random() * 100);
-          hoverBubble = x.map((label, i) => `${label}<br>Size: ${sizeBubble[i].toFixed(1)}`);
+          hoverBubble = x.map((label, i) => 
+            `${label}<br>X: ${xBubble[i].toFixed(2)}<br>Y: ${yBubble[i].toFixed(2)}<br>Z: ${zBubble[i].toFixed(2)}<br>Size: ${sizeBubble[i].toFixed(1)}`
+          );
         }
         
         plotData = [{
-          x: x,
-          y: y,
+          x: xBubble,
+          y: yBubble,
           z: zBubble,
           type: 'scatter3d',
           mode: 'markers',
@@ -1063,7 +1305,7 @@ export(p, file = "visualization.png")
             colorscale: 'Plasma',
             showscale: true,
             colorbar: {
-              title: dataToRender.processedDatasets?.[0]?.headers?.[4] || 'Color Value'
+              title: dataToRender.processedDatasets?.[0]?.headers?.[4] || dataToRender.processedDatasets?.[0]?.headers?.[3] || 'Color Value'
             },
             opacity: 0.8,
             line: { width: 1, color: 'rgba(0,0,0,0.5)' }
@@ -1243,26 +1485,64 @@ export(p, file = "visualization.png")
         break;
 
       case 'line 3d':
-        // 3D Line/Trajectory plot for temporal data
+        // 3D Line/Trajectory plot for temporal data with proper 3D positioning
         let xLine3d = [], yLine3d = [], zLine3d = [];
         let hoverLine3d = [];
         
         if (dataToRender.processedDatasets && dataToRender.processedDatasets[0]) {
           const dataset = dataToRender.processedDatasets[0];
           const rows = dataset.rows || [];
+          const headers = dataset.headers || [];
           
-          xLine3d = rows.map((row, i) => parseFloat(row[0]) || i);
-          yLine3d = rows.map(row => parseFloat(row[1]) || 0);
+          // Map first 3 numeric columns to X, Y, Z with proper 3D distribution
+          xLine3d = rows.map((row, i) => parseFloat(row[0]) || i * 12);
+          yLine3d = rows.map((row, i) => parseFloat(row[1]) || i * 6);
           zLine3d = rows.map(row => parseFloat(row[2]) || 0);
           
+          // Create hover text with names and all column information from multiple datasets
           hoverLine3d = rows.map((row, i) => {
-            return `Time Point ${i + 1}<br>X: ${xLine3d[i]}<br>Y: ${yLine3d[i]}<br>Z: ${zLine3d[i]}`;
+            let text = `${headers[0] || 'Point'}: ${row[0] || i + 1}<br>`;
+            let usedHeaders = new Set();
+            
+            // Add the first column to used headers to prevent duplicates
+            usedHeaders.add(headers[0]);
+            
+            // Show all selected columns from the current dataset (skip first column as it's already shown)
+            headers.forEach((header, j) => {
+              if (j < row.length && j > 0 && !usedHeaders.has(header)) {
+                text += `${header}: ${row[j]}<br>`;
+                usedHeaders.add(header);
+              }
+            });
+            
+            // Add data from other datasets if available (avoid duplicates)
+            if (dataToRender.processedDatasets && dataToRender.processedDatasets.length > 1) {
+              dataToRender.processedDatasets.forEach((dataset, datasetIndex) => {
+                if (datasetIndex > 0 && dataset.rows && dataset.rows[i]) {
+                  const otherRow = dataset.rows[i];
+                  const otherHeaders = dataset.headers || [];
+                  
+                  // Add columns from other datasets (only if not already shown)
+                  otherHeaders.forEach((header, j) => {
+                    if (j < otherRow.length && otherRow[j] !== undefined && otherRow[j] !== '' && !usedHeaders.has(header)) {
+                      text += `${header}: ${otherRow[j]}<br>`;
+                      usedHeaders.add(header);
+                    }
+                  });
+                }
+              });
+            }
+            
+            return text;
           });
         } else {
-          xLine3d = x.map((_, i) => i);
-          yLine3d = y;
-          zLine3d = y.map(() => Math.random() * 50);
-          hoverLine3d = x.map((label, i) => `${label}<br>Time: ${i}<br>Value: ${y[i]}`);
+          // Fallback data with proper 3D trajectory
+          xLine3d = x.map((_, i) => i * 12 + Math.random() * 3);
+          yLine3d = y.map((val, i) => val + Math.random() * 8);
+          zLine3d = y.map((val, i) => val * 0.6 + Math.random() * 18);
+          hoverLine3d = x.map((label, i) => 
+            `${label}<br>X: ${xLine3d[i].toFixed(2)}<br>Y: ${yLine3d[i].toFixed(2)}<br>Z: ${zLine3d[i].toFixed(2)}`
+          );
         }
         
         plotData = [{
@@ -1291,7 +1571,7 @@ export(p, file = "visualization.png")
         layout = {
           ...layout,
           scene: {
-            xaxis: { title: 'Time/Sequence' },
+            xaxis: { title: dataToRender.processedDatasets?.[0]?.headers?.[0] || 'Time/Sequence' },
             yaxis: { title: dataToRender.processedDatasets?.[0]?.headers?.[1] || 'Y Value' },
             zaxis: { title: dataToRender.processedDatasets?.[0]?.headers?.[2] || 'Z Value' },
             camera: { eye: { x: 1.5, y: 1.5, z: 1.5 } }
@@ -1301,19 +1581,39 @@ export(p, file = "visualization.png")
         break;
 
       case 'network 3d':
-        // 3D Network visualization for gene/protein networks
+        // 3D Network visualization for gene/protein networks with proper positioning
         const numNodes = Math.min(x.length, 20);
         const nodes = [];
         const edges = [];
+        let networkHeaders = [];
         
-        // Create nodes in 3D space
+        if (dataToRender.processedDatasets && dataToRender.processedDatasets[0]) {
+          networkHeaders = dataToRender.processedDatasets[0].headers || [];
+        }
+        
+        // Create nodes in 3D space with better distribution
         for (let i = 0; i < numNodes; i++) {
+          // Use data values for positioning when available, otherwise use random distribution
+          let nodeX, nodeY, nodeZ;
+          if (dataToRender.processedDatasets && dataToRender.processedDatasets[0] && dataToRender.processedDatasets[0].rows[i]) {
+            const row = dataToRender.processedDatasets[0].rows[i];
+            nodeX = parseFloat(row[0]) || (i * 20 - 100);
+            nodeY = parseFloat(row[1]) || (i * 15 - 75);
+            nodeZ = parseFloat(row[2]) || (i * 10 - 50);
+          } else {
+            // Better random distribution in 3D space
+            nodeX = (Math.random() - 0.5) * 200;
+            nodeY = (Math.random() - 0.5) * 200;
+            nodeZ = (Math.random() - 0.5) * 200;
+          }
+          
           nodes.push({
-            x: Math.random() * 100 - 50,
-            y: Math.random() * 100 - 50,
-            z: Math.random() * 100 - 50,
-            name: x[i] || `Node${i}`,
-            value: y[i] || Math.random() * 100
+            x: nodeX,
+            y: nodeY,
+            z: nodeZ,
+            name: x[i] || `Node${i + 1}`,
+            value: y[i] || Math.random() * 100,
+            data: dataToRender.processedDatasets?.[0]?.rows?.[i] || []
           });
         }
         
@@ -1336,7 +1636,7 @@ export(p, file = "visualization.png")
           }
         }
         
-        // Node trace
+        // Node trace with enhanced hover information
         const nodeTrace = {
           x: nodes.map(n => n.x),
           y: nodes.map(n => n.y),
@@ -1353,8 +1653,48 @@ export(p, file = "visualization.png")
             },
             line: { width: 1, color: 'rgba(0,0,0,0.5)' }
           },
-          hovertext: nodes.map(n => `Node: ${n.name}`),
-          hovertemplate: '%{hovertext}<br>Value: %{marker.color}<extra></extra>'
+          hovertext: nodes.map((n, i) => {
+            let text = `Node: ${n.name}<br>`;
+            let usedHeaders = new Set();
+            
+            if (networkHeaders.length > 0 && n.data.length > 0) {
+              // Add the first column to used headers to prevent duplicates
+              if (networkHeaders[0]) {
+                usedHeaders.add(networkHeaders[0]);
+              }
+              
+              // Show all selected columns from the current dataset
+              networkHeaders.forEach((header, j) => {
+                if (j < n.data.length && !usedHeaders.has(header)) {
+                  text += `${header}: ${n.data[j]}<br>`;
+                  usedHeaders.add(header);
+                }
+              });
+              
+              // Add data from other datasets if available (avoid duplicates)
+              if (dataToRender.processedDatasets && dataToRender.processedDatasets.length > 1) {
+                dataToRender.processedDatasets.forEach((dataset, datasetIndex) => {
+                  if (datasetIndex > 0 && dataset.rows && dataset.rows[i]) {
+                    const otherRow = dataset.rows[i];
+                    const otherHeaders = dataset.headers || [];
+                    
+                    // Add columns from other datasets (only if not already shown)
+                    otherHeaders.forEach((header, j) => {
+                      if (j < otherRow.length && otherRow[j] !== undefined && otherRow[j] !== '' && !usedHeaders.has(header)) {
+                        text += `${header}: ${otherRow[j]}<br>`;
+                        usedHeaders.add(header);
+                      }
+                    });
+                  }
+                });
+              }
+            } else {
+              text += `Value: ${n.value.toFixed(2)}<br>`;
+              text += `Position: (${n.x.toFixed(1)}, ${n.y.toFixed(1)}, ${n.z.toFixed(1)})`;
+            }
+            return text;
+          }),
+          hovertemplate: '%{hovertext}<extra></extra>'
         };
         
         plotData = [...edgeTraces, nodeTrace];
@@ -1362,9 +1702,9 @@ export(p, file = "visualization.png")
         layout = {
           ...layout,
           scene: {
-            xaxis: { title: 'X Position', showgrid: false },
-            yaxis: { title: 'Y Position', showgrid: false },
-            zaxis: { title: 'Z Position', showgrid: false },
+            xaxis: { title: networkHeaders[0] || 'X Position', showgrid: false },
+            yaxis: { title: networkHeaders[1] || 'Y Position', showgrid: false },
+            zaxis: { title: networkHeaders[2] || 'Z Position', showgrid: false },
             camera: { eye: { x: 1.5, y: 1.5, z: 1.5 } }
           },
           title: '3D Network Visualization - Gene/Protein Interactions',

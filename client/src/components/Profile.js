@@ -19,10 +19,16 @@ const Profile = () => {
     profilePicture: ''
   });
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [userStats, setUserStats] = useState({
+    visualizationCount: 0,
+    fileUploadCount: 0,
+    historyCount: 0
+  });
   const fileInputRef = useRef(null);
 
   useEffect(() => {
     fetchUserProfile();
+    fetchUserStats();
   }, []);
 
   const fetchUserProfile = async () => {
@@ -44,6 +50,18 @@ const Profile = () => {
       console.error('Error fetching user profile:', err);
       setError('Failed to fetch user profile. Please ensure you are logged in.');
       setLoading(false);
+    }
+  };
+
+  const fetchUserStats = async () => {
+    try {
+      const res = await axios.get('http://localhost:5000/api/users/stats', {
+        withCredentials: true,
+      });
+      setUserStats(res.data);
+    } catch (err) {
+      console.error('Error fetching user stats:', err);
+      // Don't set error for stats, just keep default values
     }
   };
 
@@ -332,7 +350,7 @@ const Profile = () => {
                     <i className="fas fa-chart-bar"></i>
                   </div>
                   <div className="stat-content">
-                    <h3>0</h3>
+                    <h3>{userStats.visualizationCount}</h3>
                     <p>Visualizations Created</p>
                   </div>
                 </div>
@@ -341,8 +359,17 @@ const Profile = () => {
                     <i className="fas fa-upload"></i>
                   </div>
                   <div className="stat-content">
-                    <h3>0</h3>
+                    <h3>{userStats.fileUploadCount}</h3>
                     <p>Files Uploaded</p>
+                  </div>
+                </div>
+                <div className="stat-item">
+                  <div className="stat-icon">
+                    <i className="fas fa-history"></i>
+                  </div>
+                  <div className="stat-content">
+                    <h3>{userStats.historyCount}</h3>
+                    <p>History Count</p>
                   </div>
                 </div>
                 <div className="stat-item">
