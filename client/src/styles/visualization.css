@@ -26,23 +26,29 @@
   box-shadow: var(--shadow);
   background: var(--white);
   padding: 1rem;
+  position: relative;
+  z-index: 2;
+  overflow: visible; /* ensure colorbar/legend are not clipped */
 }
 
 /* Make the plotly container responsive and centered */
 .js-plotly-plot {
   max-width: 100% !important;
   height: 100% !important;
+  overflow: visible !important; /* allow legend/colorbar to overflow */
 }
 
 .plot-container {
   max-width: 100% !important;
   height: 100% !important;
+  overflow: visible !important;
 }
 
 /* Ensure plotly plots don't overflow */
 .js-plotly-plot .plotly {
   width: 100% !important;
   height: 100% !important;
+  overflow: visible !important;
 }
 
 /* Responsive adjustments for smaller screens */

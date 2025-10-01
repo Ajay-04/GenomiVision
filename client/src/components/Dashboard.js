@@ -32,36 +32,12 @@ const Dashboard = () => {
       onClick: () => navigate('/history'),
     },
     {
-      title: 'Data Statistics',
-      image: CardImage3,
-      description: 'View metrics on uploaded files and variants analyzed.',
-      buttonText: 'View Stats',
-      buttonClass: 'button-outline-primary',
-      onClick: () => alert('Data statistics coming soon!'),
-    },
-    {
-      title: 'Analysis Reports',
-      image: CardImage4,
-      description: 'Access reports on variant analysis and gene expression.',
-      buttonText: 'View Reports',
-      buttonClass: 'button-outline-primary',
-      onClick: () => alert('Analysis reports coming soon!'),
-    },
-    {
       title: 'Recent Activity',
       image: CardImage5,
       description: 'Track visualizations created and files uploaded.',
       buttonText: 'View All',
       buttonClass: 'button-outline-primary',
       onClick: () => navigate('/recent-activity'),
-    },
-    {
-      title: 'Project Management',
-      image: CardImage6,
-      description: 'Organize genomics projects and datasets efficiently.',
-      buttonText: 'Manage Projects',
-      buttonClass: 'button-outline-primary',
-      onClick: () => alert('Project management coming soon!'),
     },
   ];
 

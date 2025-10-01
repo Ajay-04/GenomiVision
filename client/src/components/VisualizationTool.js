@@ -360,7 +360,7 @@ export(p, file = "visualization.png")
     let layout = {
       ...config,
       title: `Genomic Visualization - ${visualizationType}`,
-      xaxis: { title: xAxisTitle, tickfont: { size: 14 } },
+      xaxis: { title: xAxisTitle, tickfont: { size: 14 }, showticklabels: false },
       yaxis: { title: yAxisTitle, tickfont: { size: 14 } },
       plot_bgcolor: '#f9f9f9',
       paper_bgcolor: '#fff',
@@ -374,6 +374,8 @@ export(p, file = "visualization.png")
         pad: 4
       },
       showlegend: plotData.length > 1, // Show legend for multiple datasets
+      // Ensure colorbar/legend can render above nearby elements
+      hoverlabel: { bgcolor: '#fff', bordercolor: '#ccc' }
     };
 
     // Only create plotData if it hasn't been populated for multiple datasets
@@ -998,8 +1000,8 @@ export(p, file = "visualization.png")
             } : undefined,
             line: { width: 0.5, color: 'rgba(0,0,0,0.3)' }
           },
-          text: hoverText3d,
-          hovertemplate: '%{text}<extra></extra>'
+          hovertext: hoverText3d,
+          hovertemplate: '%{hovertext}<extra></extra>'
         }];
         
         layout = {
@@ -1066,8 +1068,8 @@ export(p, file = "visualization.png")
             opacity: 0.8,
             line: { width: 1, color: 'rgba(0,0,0,0.5)' }
           },
-          text: hoverBubble,
-          hovertemplate: '%{text}<extra></extra>'
+          hovertext: hoverBubble,
+          hovertemplate: '%{hovertext}<extra></extra>'
         }];
         
         layout = {
@@ -1282,8 +1284,8 @@ export(p, file = "visualization.png")
               title: 'Trajectory Value'
             }
           },
-          text: hoverLine3d,
-          hovertemplate: '%{text}<extra></extra>'
+          hovertext: hoverLine3d,
+          hovertemplate: '%{hovertext}<extra></extra>'
         }];
         
         layout = {
@@ -1340,7 +1342,7 @@ export(p, file = "visualization.png")
           y: nodes.map(n => n.y),
           z: nodes.map(n => n.z),
           type: 'scatter3d',
-          mode: 'markers+text',
+          mode: 'markers',
           marker: {
             size: nodes.map(n => Math.max(n.value / Math.max(...nodes.map(n => n.value)) * 20, 5)),
             color: nodes.map(n => n.value),
@@ -1351,9 +1353,8 @@ export(p, file = "visualization.png")
             },
             line: { width: 1, color: 'rgba(0,0,0,0.5)' }
           },
-          text: nodes.map(n => n.name),
-          textposition: 'top center',
-          hovertemplate: 'Node: %{text}<br>Value: %{marker.color}<extra></extra>'
+          hovertext: nodes.map(n => `Node: ${n.name}`),
+          hovertemplate: '%{hovertext}<br>Value: %{marker.color}<extra></extra>'
         };
         
         plotData = [...edgeTraces, nodeTrace];
@@ -1389,7 +1390,8 @@ export(p, file = "visualization.png")
       displayModeBar: true, 
       responsive: true,
       displaylogo: false,
-      modeBarButtonsToRemove: ['pan2d', 'lasso2d', 'select2d']
+      modeBarButtonsToRemove: ['pan2d', 'lasso2d', 'select2d'],
+      toImageButtonOptions: { scale: 2 }
     });
   };
 

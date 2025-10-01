@@ -54,10 +54,32 @@ testDatabaseConnection();
 
 const app = express();
 
-// Enable CORS for http://localhost:3000
+// Enable CORS for development origins (3000, 3001)
+const allowedOrigins = ['http://localhost:3000', 'http://localhost:3001'];
+
+// Consistent CORS headers for all requests including preflight
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (origin && allowedOrigins.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin);
+    res.header('Vary', 'Origin');
+  }
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(204);
+  }
+  next();
+});
+
+// Also use cors package for safety
 app.use(cors({
-  origin: 'http://localhost:3000',
-  methods: ['GET', 'POST'],
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    return callback(new Error('CORS not allowed from this origin: ' + origin));
+  },
   credentials: true,
 }));
 
@@ -272,6 +294,40 @@ app.post('/api/uploads', authenticateUser, async (req, res) => {
   } catch (err) {
     console.error('Error saving visualization:', err);
     res.status(500).json({ message: 'Failed to save visualization' });
+  }
+});
+
+// Proxy Groq Chat Completions via server-side API key (more secure)
+app.post('/api/groq/chat', authenticateUser, async (req, res) => {
+  try {
+    const apiKey = process.env.GROQ_API_KEY || process.env.REACT_APP_GROQ_API_KEY;
+    if (!apiKey) {
+      return res.status(500).json({ message: 'Server GROQ_API_KEY is not configured.' });
+    }
+
+    const { messages, model = 'llama-3.3-70b-versatile', temperature = 0.7, max_tokens = 1024, top_p = 1 } = req.body || {};
+    if (!Array.isArray(messages) || messages.length === 0) {
+      return res.status(400).json({ message: 'messages array is required.' });
+    }
+
+    const groqResp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({ model, messages, temperature, max_tokens, top_p, stream: false }),
+    });
+
+    const data = await groqResp.json();
+    if (!groqResp.ok) {
+      return res.status(groqResp.status).json({ message: data?.error?.message || 'Groq API error', raw: data });
+    }
+
+    res.json(data);
+  } catch (err) {
+    console.error('Groq proxy error:', err);
+    res.status(500).json({ message: 'Server error proxying Groq request.' });
   }
 });
 
