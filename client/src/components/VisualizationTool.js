@@ -360,8 +360,8 @@ export(p, file = "visualization.png")
     let layout = {
       ...config,
       title: `Genomic Visualization - ${visualizationType}`,
-      xaxis: { title: xAxisTitle, tickfont: { size: 14 }, showticklabels: false },
-      yaxis: { title: yAxisTitle, tickfont: { size: 14 } },
+      xaxis: { title: xAxisTitle, tickfont: { size: 14 }, showticklabels: true, automargin: true },
+      yaxis: { title: yAxisTitle, tickfont: { size: 14 }, automargin: true },
       plot_bgcolor: '#f9f9f9',
       paper_bgcolor: '#fff',
       font: { size: 14, color: '#2A3547' },
@@ -1327,32 +1327,72 @@ export(p, file = "visualization.png")
         break;
 
       case 'surface 3d':
-        // 3D Surface plot for continuous data visualization
-        const gridSize = Math.ceil(Math.sqrt(x.length));
+        // 3D Surface plot for continuous data visualization with improved interpolation
+        const gridSize = Math.max(Math.ceil(Math.sqrt(Math.min(x.length, 100))), 5);
         const surfaceZ = [];
+        const surfaceX = [];
+        const surfaceY = [];
         
-        // Create a grid for surface plot
+        // Create coordinate arrays for surface
+        for (let i = 0; i < gridSize; i++) {
+          surfaceX.push(i);
+          surfaceY.push(i);
+        }
+        
+        // Create a grid for surface plot with better interpolation
         for (let i = 0; i < gridSize; i++) {
           const row = [];
           for (let j = 0; j < gridSize; j++) {
             const index = i * gridSize + j;
-            if (index < y.length) {
-              row.push(y[index]);
+            let value;
+            
+            if (dataToRender.processedDatasets && dataToRender.processedDatasets[0]) {
+              const dataset = dataToRender.processedDatasets[0];
+              const rows = dataset.rows || [];
+              
+              if (index < rows.length && rows[index]) {
+                value = parseFloat(rows[index][2]) || parseFloat(rows[index][1]) || 0;
+              } else {
+                // Better interpolation using nearby values
+                const nearbyIndices = [];
+                for (let di = -1; di <= 1; di++) {
+                  for (let dj = -1; dj <= 1; dj++) {
+                    const ni = i + di;
+                    const nj = j + dj;
+                    const nIndex = ni * gridSize + nj;
+                    if (ni >= 0 && ni < gridSize && nj >= 0 && nj < gridSize && nIndex < rows.length && rows[nIndex]) {
+                      nearbyIndices.push(parseFloat(rows[nIndex][2]) || parseFloat(rows[nIndex][1]) || 0);
+                    }
+                  }
+                }
+                value = nearbyIndices.length > 0 ? 
+                  nearbyIndices.reduce((a, b) => a + b, 0) / nearbyIndices.length :
+                  Math.sin(i * 0.5) * Math.cos(j * 0.5) * 20;
+              }
             } else {
-              // Interpolate or use nearby values
-              row.push(y[y.length - 1] + Math.random() * 10 - 5);
+              if (index < y.length) {
+                value = y[index];
+              } else {
+                // Create a smooth mathematical surface
+                value = Math.sin(i * 0.3) * Math.cos(j * 0.3) * 25 + Math.random() * 5;
+              }
             }
+            
+            row.push(value);
           }
           surfaceZ.push(row);
         }
         
         plotData = [{
+          x: surfaceX,
+          y: surfaceY,
           z: surfaceZ,
           type: 'surface',
           colorscale: 'Viridis',
           showscale: true,
           colorbar: {
-            title: 'Expression Level'
+            title: dataToRender.processedDatasets?.[0]?.headers?.[2] || 'Surface Value',
+            titleside: 'right'
           },
           contours: {
             z: {
@@ -1360,53 +1400,119 @@ export(p, file = "visualization.png")
               usecolormap: true,
               highlightcolor: "#42f462",
               project: { z: true }
+            },
+            x: {
+              show: false
+            },
+            y: {
+              show: false
             }
-          }
+          },
+          lighting: {
+            ambient: 0.4,
+            diffuse: 0.8,
+            fresnel: 0.2,
+            specular: 0.05,
+            roughness: 0.1
+          },
+          hovertemplate: 'X: %{x}<br>Y: %{y}<br>Z: %{z}<extra></extra>'
         }];
         
         layout = {
           ...layout,
           scene: {
-            xaxis: { title: 'X Coordinate' },
-            yaxis: { title: 'Y Coordinate' },
-            zaxis: { title: dataToRender.processedDatasets?.[0]?.headers?.[1] || 'Z Value' },
-            camera: { eye: { x: 1.87, y: 0.88, z: -0.64 } }
+            xaxis: { title: dataToRender.processedDatasets?.[0]?.headers?.[0] || 'X Coordinate' },
+            yaxis: { title: dataToRender.processedDatasets?.[0]?.headers?.[1] || 'Y Coordinate' },
+            zaxis: { title: dataToRender.processedDatasets?.[0]?.headers?.[2] || 'Surface Value' },
+            camera: { eye: { x: 1.87, y: 0.88, z: -0.64 } },
+            aspectmode: 'cube'
           },
-          title: '3D Surface Plot - Expression Landscape'
+          title: '3D Surface Plot - Continuous Data Landscape'
         };
         break;
 
       case 'mesh 3d':
-        // 3D Mesh plot for cluster visualization
+        // 3D Mesh plot for cluster visualization with improved triangulation
         let xMesh = [], yMesh = [], zMesh = [];
         let iMesh = [], jMesh = [], kMesh = [];
+        let hoverMesh = [];
         
         if (dataToRender.processedDatasets && dataToRender.processedDatasets[0]) {
           const dataset = dataToRender.processedDatasets[0];
           const rows = dataset.rows || [];
+          const headers = dataset.headers || [];
           
-          xMesh = rows.map(row => parseFloat(row[0]) || 0);
-          yMesh = rows.map(row => parseFloat(row[1]) || 0);
-          zMesh = rows.map(row => parseFloat(row[2]) || 0);
+          // Create a grid-based mesh for better visualization
+          const gridSize = Math.ceil(Math.sqrt(Math.min(rows.length, 25)));
           
-          // Create triangular mesh indices
-          for (let i = 0; i < Math.min(rows.length - 2, 50); i += 3) {
-            iMesh.push(i, i + 1, i + 2);
-            jMesh.push(i + 1, i + 2, i);
-            kMesh.push(i + 2, i, i + 1);
+          for (let i = 0; i < gridSize; i++) {
+            for (let j = 0; j < gridSize; j++) {
+              const index = i * gridSize + j;
+              if (index < rows.length) {
+                const row = rows[index];
+                xMesh.push(parseFloat(row[0]) || i * 10);
+                yMesh.push(parseFloat(row[1]) || j * 10);
+                zMesh.push(parseFloat(row[2]) || Math.random() * 30);
+                
+                // Create hover text
+                let text = `Point ${index + 1}<br>`;
+                headers.forEach((header, k) => {
+                  if (k < row.length) {
+                    text += `${header}: ${row[k]}<br>`;
+                  }
+                });
+                hoverMesh.push(text);
+              }
+            }
+          }
+          
+          // Create proper triangular mesh indices for grid
+          for (let i = 0; i < gridSize - 1; i++) {
+            for (let j = 0; j < gridSize - 1; j++) {
+              const idx = i * gridSize + j;
+              if (idx + gridSize + 1 < xMesh.length) {
+                // First triangle
+                iMesh.push(idx);
+                jMesh.push(idx + 1);
+                kMesh.push(idx + gridSize);
+                
+                // Second triangle
+                iMesh.push(idx + 1);
+                jMesh.push(idx + gridSize + 1);
+                kMesh.push(idx + gridSize);
+              }
+            }
           }
         } else {
-          // Generate sample mesh data
-          for (let i = 0; i < x.length; i++) {
-            xMesh.push(i);
-            yMesh.push(y[i]);
-            zMesh.push(Math.random() * 50);
+          // Generate sample mesh data in a grid pattern
+          const gridSize = Math.ceil(Math.sqrt(Math.min(x.length, 25)));
+          
+          for (let i = 0; i < gridSize; i++) {
+            for (let j = 0; j < gridSize; j++) {
+              const index = i * gridSize + j;
+              xMesh.push(i * 15);
+              yMesh.push(j * 15);
+              zMesh.push(index < y.length ? y[index] : Math.random() * 50);
+              hoverMesh.push(`Grid Point (${i}, ${j})<br>Value: ${zMesh[zMesh.length - 1].toFixed(2)}`);
+            }
           }
           
-          for (let i = 0; i < Math.min(x.length - 2, 20); i += 3) {
-            iMesh.push(i, i + 1, i + 2);
-            jMesh.push(i + 1, i + 2, i);
-            kMesh.push(i + 2, i, i + 1);
+          // Create triangular mesh indices for grid
+          for (let i = 0; i < gridSize - 1; i++) {
+            for (let j = 0; j < gridSize - 1; j++) {
+              const idx = i * gridSize + j;
+              if (idx + gridSize + 1 < xMesh.length) {
+                // First triangle
+                iMesh.push(idx);
+                jMesh.push(idx + 1);
+                kMesh.push(idx + gridSize);
+                
+                // Second triangle
+                iMesh.push(idx + 1);
+                jMesh.push(idx + gridSize + 1);
+                kMesh.push(idx + gridSize);
+              }
+            }
           }
         }
         
@@ -1422,35 +1528,84 @@ export(p, file = "visualization.png")
           intensity: zMesh,
           showscale: true,
           colorbar: {
-            title: 'Intensity'
+            title: 'Intensity',
+            titleside: 'right'
           },
-          opacity: 0.7
+          opacity: 0.8,
+          lighting: {
+            ambient: 0.18,
+            diffuse: 1,
+            fresnel: 0.1,
+            specular: 1,
+            roughness: 0.05,
+            facenormalsepsilon: 1e-15,
+            vertexnormalsepsilon: 1e-15
+          },
+          lightposition: {
+            x: 100,
+            y: 200,
+            z: 0
+          },
+          hovertemplate: '%{text}<extra></extra>',
+          text: hoverMesh
         }];
         
         layout = {
           ...layout,
           scene: {
-            xaxis: { title: 'X Coordinate' },
-            yaxis: { title: 'Y Coordinate' },
-            zaxis: { title: 'Z Coordinate' },
-            camera: { eye: { x: 1.5, y: 1.5, z: 1.5 } }
+            xaxis: { title: dataToRender.processedDatasets?.[0]?.headers?.[0] || 'X Coordinate' },
+            yaxis: { title: dataToRender.processedDatasets?.[0]?.headers?.[1] || 'Y Coordinate' },
+            zaxis: { title: dataToRender.processedDatasets?.[0]?.headers?.[2] || 'Z Coordinate' },
+            camera: { eye: { x: 1.5, y: 1.5, z: 1.5 } },
+            aspectmode: 'cube'
           },
-          title: '3D Mesh Plot - Cluster Visualization'
+          title: '3D Mesh Plot - Surface Cluster Visualization'
         };
         break;
 
       case 'volume 3d':
-        // 3D Volume plot for voxel-based rendering
-        const volumeSize = Math.ceil(Math.cbrt(x.length));
+        // 3D Volume plot for voxel-based rendering with improved data structure
+        const volumeSize = Math.max(Math.ceil(Math.cbrt(Math.min(x.length, 64))), 3);
         const volumeData = [];
+        let minValue = Infinity, maxValue = -Infinity;
         
-        // Create 3D volume data
+        // Create 3D volume data with better value distribution
         for (let i = 0; i < volumeSize; i++) {
           for (let j = 0; j < volumeSize; j++) {
             for (let k = 0; k < volumeSize; k++) {
               const index = i * volumeSize * volumeSize + j * volumeSize + k;
-              const value = index < y.length ? y[index] : Math.random() * 50;
+              let value;
+              
+              if (dataToRender.processedDatasets && dataToRender.processedDatasets[0]) {
+                const dataset = dataToRender.processedDatasets[0];
+                const rows = dataset.rows || [];
+                
+                if (index < rows.length && rows[index]) {
+                  value = parseFloat(rows[index][2]) || parseFloat(rows[index][1]) || 0;
+                } else {
+                  // Create a 3D Gaussian-like distribution
+                  const centerX = volumeSize / 2;
+                  const centerY = volumeSize / 2;
+                  const centerZ = volumeSize / 2;
+                  const distance = Math.sqrt(
+                    Math.pow(i - centerX, 2) + 
+                    Math.pow(j - centerY, 2) + 
+                    Math.pow(k - centerZ, 2)
+                  );
+                  value = Math.exp(-distance * 0.3) * 100 + Math.random() * 10;
+                }
+              } else {
+                if (index < y.length) {
+                  value = y[index];
+                } else {
+                  // Create a 3D pattern
+                  value = Math.sin(i * 0.5) * Math.cos(j * 0.5) * Math.sin(k * 0.5) * 50 + 25;
+                }
+              }
+              
               volumeData.push([i, j, k, value]);
+              minValue = Math.min(minValue, value);
+              maxValue = Math.max(maxValue, value);
             }
           }
         }
@@ -1461,26 +1616,34 @@ export(p, file = "visualization.png")
           y: volumeData.map(d => d[1]),
           z: volumeData.map(d => d[2]),
           value: volumeData.map(d => d[3]),
-          isomin: Math.min(...volumeData.map(d => d[3])),
-          isomax: Math.max(...volumeData.map(d => d[3])),
-          opacity: 0.1,
-          surface_count: 15,
+          isomin: minValue + (maxValue - minValue) * 0.1,
+          isomax: maxValue - (maxValue - minValue) * 0.1,
+          opacity: 0.15,
+          surface_count: 12,
           colorscale: 'RdYlBu',
           showscale: true,
           colorbar: {
-            title: 'Density'
-          }
+            title: dataToRender.processedDatasets?.[0]?.headers?.[2] || 'Density Value',
+            titleside: 'right'
+          },
+          caps: {
+            x: { show: false },
+            y: { show: false },
+            z: { show: false }
+          },
+          hovertemplate: 'X: %{x}<br>Y: %{y}<br>Z: %{z}<br>Value: %{value}<extra></extra>'
         }];
         
         layout = {
           ...layout,
           scene: {
-            xaxis: { title: 'X Voxel' },
-            yaxis: { title: 'Y Voxel' },
-            zaxis: { title: 'Z Voxel' },
-            camera: { eye: { x: 1.5, y: 1.5, z: 1.5 } }
+            xaxis: { title: dataToRender.processedDatasets?.[0]?.headers?.[0] || 'X Voxel' },
+            yaxis: { title: dataToRender.processedDatasets?.[0]?.headers?.[1] || 'Y Voxel' },
+            zaxis: { title: dataToRender.processedDatasets?.[0]?.headers?.[2] || 'Z Voxel' },
+            camera: { eye: { x: 1.5, y: 1.5, z: 1.5 } },
+            aspectmode: 'cube'
           },
-          title: '3D Volume Plot - Density Visualization'
+          title: '3D Volume Plot - Density Distribution Visualization'
         };
         break;
 
