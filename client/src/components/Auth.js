@@ -176,8 +176,8 @@ const Auth = () => {
               </button>
             </div>
             <div className="overlay-panel right-panel">
-              <h1>Hello, Friend!</h1>
-              <p>Enter your personal details and start journey with us</p>
+              <h1>Join GenomiVisual</h1>
+              <p>Create your account and explore genomic data visualization</p>
               <button className="transparent-btn" id="registerBtn" onClick={handleSignUpClick}>
                 Sign Up
               </button>
@@ -186,7 +186,6 @@ const Auth = () => {
         </div>
       </div>
     </div>
-  );
 };
 
 

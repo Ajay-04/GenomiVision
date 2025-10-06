@@ -374,8 +374,16 @@ export(p, file = "visualization.png")
         pad: 4
       },
       showlegend: plotData.length > 1, // Show legend for multiple datasets
-      // Ensure colorbar/legend can render above nearby elements
-      hoverlabel: { bgcolor: '#fff', bordercolor: '#ccc' }
+      // Enhanced hover tooltip styling
+      hoverlabel: { 
+        bgcolor: '#2c3e50',
+        bordercolor: '#3498db',
+        font: { 
+          family: 'Arial, sans-serif', 
+          size: 14, 
+          color: '#ffffff' 
+        }
+      }
     };
 
     // Only create plotData if it hasn't been populated for multiple datasets
@@ -1744,7 +1752,7 @@ export(p, file = "visualization.png")
         break;
 
       case 'network 3d':
-        // 3D Network visualization for gene/protein networks with proper positioning
+        // 3D Network visualization for gene/protein networks with proper force-directed positioning
         const numNodes = Math.min(x.length, 20);
         const nodes = [];
         const edges = [];
@@ -1754,20 +1762,41 @@ export(p, file = "visualization.png")
           networkHeaders = dataToRender.processedDatasets[0].headers || [];
         }
         
-        // Create nodes in 3D space with better distribution
+        // Create nodes in 3D space using spherical distribution for better visualization
         for (let i = 0; i < numNodes; i++) {
-          // Use data values for positioning when available, otherwise use random distribution
           let nodeX, nodeY, nodeZ;
+          
           if (dataToRender.processedDatasets && dataToRender.processedDatasets[0] && dataToRender.processedDatasets[0].rows[i]) {
             const row = dataToRender.processedDatasets[0].rows[i];
-            nodeX = parseFloat(row[0]) || (i * 20 - 100);
-            nodeY = parseFloat(row[1]) || (i * 15 - 75);
-            nodeZ = parseFloat(row[2]) || (i * 10 - 50);
+            // Try to use actual data values if they're numeric
+            const val0 = parseFloat(row[0]);
+            const val1 = parseFloat(row[1]);
+            const val2 = parseFloat(row[2]);
+            
+            if (!isNaN(val0) && !isNaN(val1) && !isNaN(val2)) {
+              // Use actual data values if all three are numeric
+              nodeX = val0;
+              nodeY = val1;
+              nodeZ = val2;
+            } else {
+              // Use spherical distribution for non-numeric or missing data
+              const radius = 100;
+              const phi = Math.acos(2 * (i / numNodes) - 1);
+              const theta = Math.PI * (1 + Math.sqrt(5)) * i;
+              
+              nodeX = radius * Math.sin(phi) * Math.cos(theta);
+              nodeY = radius * Math.sin(phi) * Math.sin(theta);
+              nodeZ = radius * Math.cos(phi);
+            }
           } else {
-            // Better random distribution in 3D space
-            nodeX = (Math.random() - 0.5) * 200;
-            nodeY = (Math.random() - 0.5) * 200;
-            nodeZ = (Math.random() - 0.5) * 200;
+            // Spherical Fibonacci lattice for even distribution
+            const radius = 100;
+            const phi = Math.acos(2 * (i / numNodes) - 1);
+            const theta = Math.PI * (1 + Math.sqrt(5)) * i;
+            
+            nodeX = radius * Math.sin(phi) * Math.cos(theta);
+            nodeY = radius * Math.sin(phi) * Math.sin(theta);
+            nodeZ = radius * Math.cos(phi);
           }
           
           nodes.push({
@@ -1780,18 +1809,35 @@ export(p, file = "visualization.png")
           });
         }
         
-        // Create edges between nodes
+        // Create edges based on proximity and value similarity for meaningful connections
         const edgeTraces = [];
         for (let i = 0; i < numNodes; i++) {
           for (let j = i + 1; j < numNodes; j++) {
-            if (Math.random() < 0.3) { // 30% chance of connection
+            // Calculate distance between nodes
+            const dx = nodes[i].x - nodes[j].x;
+            const dy = nodes[i].y - nodes[j].y;
+            const dz = nodes[i].z - nodes[j].z;
+            const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+            
+            // Calculate value similarity
+            const valueDiff = Math.abs(nodes[i].value - nodes[j].value);
+            const maxValue = Math.max(nodes[i].value, nodes[j].value);
+            const similarity = 1 - (valueDiff / maxValue);
+            
+            // Connect if nodes are close OR have similar values
+            if (distance < 150 || similarity > 0.7) {
+              // Edge opacity based on connection strength
+              const strength = distance < 150 ? (1 - distance / 150) : similarity;
               edgeTraces.push({
                 x: [nodes[i].x, nodes[j].x, null],
                 y: [nodes[i].y, nodes[j].y, null],
                 z: [nodes[i].z, nodes[j].z, null],
                 type: 'scatter3d',
                 mode: 'lines',
-                line: { color: 'rgba(125,125,125,0.5)', width: 2 },
+                line: { 
+                  color: `rgba(100,150,200,${Math.max(0.2, strength * 0.6)})`, 
+                  width: Math.max(1, strength * 4) 
+                },
                 showlegend: false,
                 hoverinfo: 'none'
               });

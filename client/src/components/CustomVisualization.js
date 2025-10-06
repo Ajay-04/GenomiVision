@@ -134,7 +134,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { BeatLoader } from 'react-spinners';
-
 const CustomVisualization = ({ inputFileContent, visualizationType, onDataUpdate }) => {
   const [customPrompt, setCustomPrompt] = useState('');
   const [loading, setLoading] = useState(false);
@@ -144,7 +143,9 @@ const CustomVisualization = ({ inputFileContent, visualizationType, onDataUpdate
 
   useEffect(() => {
     if (!GROQ_API_KEY) {
-      setError('API key is not configured. Please set GROQ_API_KEY in your .env file.');
+      setError('API key is not configured. Please follow these steps:\n\n1. Create a .env file in the client/ directory\n2. Add this line: REACT_APP_GROQ_API_KEY=your_api_key_here\n3. Get your API key from: https://console.groq.com/keys\n4. Restart the development server');
+    } else {
+      setError(''); // Clear error if API key is present
     }
     console.log('Component mounted - GROQ_API_KEY:', !!GROQ_API_KEY, 'visualizationType:', visualizationType, 'inputFileContent:', !!inputFileContent);
   }, [GROQ_API_KEY, visualizationType, inputFileContent]);
@@ -157,7 +158,7 @@ const CustomVisualization = ({ inputFileContent, visualizationType, onDataUpdate
     }
 
     if (!GROQ_API_KEY) {
-      setError('API key is missing. Please configure GROQ_API_KEY.');
+      setError('API key is missing. Please:\n1. Create a .env file in the client/ folder\n2. Add: REACT_APP_GROQ_API_KEY=your_api_key\n3. Get API key from https://console.groq.com/keys\n4. Restart the server');
       return;
     }
 
@@ -257,7 +258,7 @@ const CustomVisualization = ({ inputFileContent, visualizationType, onDataUpdate
           <BeatLoader color="#4CAF50" size={15} />
         </div>
       )}
-      {error && <div className="error-message" style={{ color: 'red', marginTop: '10px' }}>{error}</div>}
+      {error && <div className="error-message" style={{ color: '#e74c3c', marginTop: '10px', padding: '15px', backgroundColor: '#fadbd8', borderRadius: '8px', border: '1px solid #e74c3c', whiteSpace: 'pre-line', fontSize: '14px', lineHeight: '1.6' }}>{error}</div>}
     </div>
   );
 };
