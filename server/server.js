@@ -352,7 +352,7 @@ app.post('/api/groq/chat', authenticateUser, async (req, res) => {
       return res.status(500).json({ message: 'Server GROQ_API_KEY is not configured.' });
     }
 
-    const { messages, model = 'llama-3.3-70b-versatile', temperature = 0.7, max_tokens = 1024, top_p = 1 } = req.body || {};
+    const { messages, model = 'meta-llama/llama-4-scout-17b-16e-instruct', temperature = 0.7, max_tokens = 1024, top_p = 1 } = req.body || {};
     if (!Array.isArray(messages) || messages.length === 0) {
       return res.status(400).json({ message: 'messages array is required.' });
     }

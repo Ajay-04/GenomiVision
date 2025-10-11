@@ -8,16 +8,9 @@ const CustomVisualization = ({ inputFileContent, visualizationType, onDataUpdate
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const GROQ_API_KEY = process.env.REACT_APP_GROQ_API_KEY;
-
   useEffect(() => {
-    if (!GROQ_API_KEY) {
-      setError('API key is not configured. Please follow these steps:\n\n1. Create a .env file in the client/ directory\n2. Add this line: REACT_APP_GROQ_API_KEY=your_api_key_here\n3. Get your API key from: https://console.groq.com/keys\n4. Restart the development server');
-    } else {
-      setError(''); // Clear error if API key is present
-    }
-    console.log('Component mounted - GROQ_API_KEY:', !!GROQ_API_KEY, 'visualizationType:', visualizationType, 'inputFileContent:', !!inputFileContent);
-  }, [GROQ_API_KEY, visualizationType, inputFileContent]);
+    console.log('Component mounted - visualizationType:', visualizationType, 'inputFileContent:', !!inputFileContent);
+  }, [visualizationType, inputFileContent]);
 
   const sendToLLM = async () => {
     console.log('sendToLLM triggered - visualizationType:', visualizationType, 'customPrompt:', customPrompt, 'inputFileContent:', inputFileContent);
@@ -26,19 +19,14 @@ const CustomVisualization = ({ inputFileContent, visualizationType, onDataUpdate
       return;
     }
 
-    if (!GROQ_API_KEY) {
-      setError('API key is missing. Please:\n1. Create a .env file in the client/ folder\n2. Add: REACT_APP_GROQ_API_KEY=your_api_key\n3. Get API key from https://console.groq.com/keys\n4. Restart the server');
-      return;
-    }
-
     setLoading(true);
     setError('');
 
     try {
       const response = await axios.post(
-        'https://api.groq.com/openai/v1/chat/completions',
+        '/api/groq/chat',
         {
-          model: 'llama3-70b-8192',
+          model: 'meta-llama/llama-4-scout-17b-16e-instruct',
           messages: [
             {
               role: 'user',
@@ -50,8 +38,8 @@ const CustomVisualization = ({ inputFileContent, visualizationType, onDataUpdate
         {
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${GROQ_API_KEY}`,
           },
+          withCredentials: true, // Include session cookies
         }
       );
 
@@ -110,14 +98,14 @@ const CustomVisualization = ({ inputFileContent, visualizationType, onDataUpdate
       />
       <button
         onClick={sendToLLM}
-        disabled={loading || !GROQ_API_KEY || !visualizationType}
+        disabled={loading || !visualizationType}
         style={{
           padding: '8px 16px',
           backgroundColor: '#4CAF50',
           color: 'white',
           border: 'none',
           borderRadius: '5px',
-          cursor: loading || !GROQ_API_KEY || !visualizationType ? 'not-allowed' : 'pointer',
+          cursor: loading || !visualizationType ? 'not-allowed' : 'pointer',
         }}
       >
         {loading ? 'Generating...' : 'Generate Visualization'}
