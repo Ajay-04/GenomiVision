@@ -9,7 +9,7 @@ const CustomVisualizationPage = () => {
   const { state } = useLocation();
   const { inputFileContent } = state || {};
   const [chatHistory, setChatHistory] = useState([
-    { role: 'assistant', content: '🤖 **GenomiVisual AI Assistant**\n\nI can help you:\n• Analyze your data patterns\n• Create visualizations\n• Explore data relationships\n• Generate insights\n\nAsk me anything about your uploaded file!' },
+    { role: 'assistant', content: '🤖 **GenomiVisual AI Assistant**\n\n Hi I am GenomiVisual AI assistant how can I help you ?' },
   ]);
   const [userInput, setUserInput] = useState('');
   const [streamingText, setStreamingText] = useState('');
