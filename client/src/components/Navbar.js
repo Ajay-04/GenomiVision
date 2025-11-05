@@ -124,7 +124,7 @@ const Navbar = () => {
 
       <nav className="top-navbar">
         <div className="navbar-container">
-          <h1 className="navbar-logo">GenomiVision</h1>
+          <h1 className="navbar-logo">GenomiVisual</h1>
           <button className="sidenav-toggle" onClick={toggleSidenav}>
             <i className="fas fa-bars"></i>
           </button>
