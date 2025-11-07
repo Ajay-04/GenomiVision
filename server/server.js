@@ -274,7 +274,7 @@ app.post('/api/data/upload', upload.single('file'), authenticateUser, async (req
 // Endpoint to save a visualization upload to Firebase (for WizardStep4)
 app.post('/api/uploads', authenticateUser, async (req, res) => {
   try {
-    const { image, format } = req.body;
+    const { image, format, chartType } = req.body;
     if (!image || !format) {
       return res.status(400).json({ message: 'Image and format are required.' });
     }
@@ -283,6 +283,7 @@ app.post('/api/uploads', authenticateUser, async (req, res) => {
       email: req.session.user.email,
       image,
       format,
+      chartType: chartType || format, // Use chartType if provided, otherwise fallback to format
       timestamp: Date.now(),
     };
 

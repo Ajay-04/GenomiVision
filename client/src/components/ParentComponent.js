@@ -13,7 +13,7 @@ const ParentComponent = () => {
       <div id="visualization" style={{ width: '400px', height: '300px', background: '#f0f0f0', padding: '20px' }}>
         Sample Visualization Content (Replace with your chart/canvas)
       </div>
-      {step === 4 && <WizardStep4 onBack={handleBack} />}
+      {step === 4 && <WizardStep4 onBack={handleBack} visualizationType="Sample Visualization" />}
     </div>
   );
 };

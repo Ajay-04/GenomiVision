@@ -315,8 +315,7 @@ const RecentActivity = () => {
                     <div key={viz.id} className="visualization-card">
                       <div className="viz-preview">
                         <img
-                          src={`data:image/png;base64,${viz.image}`}
-                          alt={`${viz.format} Visualization`}
+                          src={`data:image/png;base64,${viz.image}`}                        
                           className="viz-image"
                         />
                         <div className="viz-overlay">
@@ -331,7 +330,6 @@ const RecentActivity = () => {
                       </div>
                       
                       <div className="viz-content">
-                        <h3 className="viz-title">{viz.format} Visualization</h3>
                         <div className="viz-meta">
                           <div className="meta-item">
                             <i className="fas fa-calendar"></i>

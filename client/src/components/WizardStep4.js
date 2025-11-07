@@ -2,11 +2,44 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import Plotly from 'plotly.js';
 
-const WizardStep4 = ({ onBack, plotRef, onExport }) => {
+const WizardStep4 = ({ onBack, plotRef, onExport, visualizationType }) => {
   const [userEmail, setUserEmail] = useState(null);
   const [error, setError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+
+  // Map chart type IDs to readable names
+  const chartTypeNames = {
+    'bar_chart': 'Bar Chart',
+    'line_chart': 'Line Chart', 
+    'scatter_plot': 'Scatter Plot',
+    'heatmap': 'Heatmap',
+    'genome_browser': 'Genome Browser',
+    'manhattan_plot': 'Manhattan Plot',
+    'volcano_plot': 'Volcano Plot',
+    'lollipop_plot': 'Lollipop Plot',
+    'circular_plot': 'Circos Plot',
+    'coverage_plot': 'Coverage Plot',
+    'box_plot': 'Box Plot',
+    'violin_plot': 'Violin Plot',
+    'pca_plot': 'PCA Plot',
+    'tsne_plot': 't-SNE Plot',
+    'variant_heatmap': 'Variant Heatmap',
+    'allele_frequency': 'Allele Frequency',
+    'phylogenetic_tree': 'Phylogenetic Tree',
+    'time_series': 'Time Series',
+    'stacked_area': 'Stacked Area Chart',
+    'geographic_map': 'Geographic Map',
+    'histogram': 'Histogram',
+    'density_plot': 'Density Plot',
+    'scatter_3d': '3D Scatter Plot',
+    'bubble_3d': '3D Bubble Scatter',
+    'surface_3d': '3D Surface Plot',
+    'mesh_3d': '3D Mesh Plot',
+    'volume_3d': '3D Volume Plot',
+    'line_3d': '3D Line/Trajectory Plot',
+    'network_3d': '3D Network Visualization'
+  };
 
   const formats = [
     { id: 'PNG', name: 'PNG', icon: '🖼️' },
@@ -57,11 +90,15 @@ const WizardStep4 = ({ onBack, plotRef, onExport }) => {
 
       const base64Image = imageDataUrl.split(',')[1];
 
+      // Get the readable chart type name
+      const chartTypeName = chartTypeNames[visualizationType] || visualizationType || 'Unknown Chart';
+      
       await axios.post(
         'http://localhost:5000/api/uploads',
         {
           image: base64Image,
-          format: 'PNG',
+          format: 'PNG', // Always PNG for the image
+          chartType: chartTypeName,
         },
         { withCredentials: true }
       );

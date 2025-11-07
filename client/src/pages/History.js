@@ -123,16 +123,34 @@ const History = () => {
                     <div className="card">
                       <div className="card-body">
                         <div className="text-center">
-                          <h3 className="text-dark font-weight-medium">{item.format} Visualization</h3>
+                          <h3 className="text-dark font-weight-medium">{item.chartType || item.format}</h3>
                         </div>
                         <div className="image-box text-center">
-                          <img
-                            src={`data:image/png;base64,${item.image}`}
-                            alt={`${item.format} Visualization`}
-                            className="img-fluid"
-                            onMouseEnter={handleImageHover}
-                            onMouseLeave={handleImageLeave}
-                          />
+                          {item.format === 'PNG' ? (
+                            <img
+                              src={`data:image/png;base64,${item.image}`}
+                              alt={`${item.chartType || item.format} Visualization`}
+                              className="img-fluid"
+                              onMouseEnter={handleImageHover}
+                              onMouseLeave={handleImageLeave}
+                            />
+                          ) : (
+                            <div className="format-preview">
+                              <div className="format-icon">
+                                {item.format === 'JSON' && '🧾'}
+                                {item.format === 'HTML' && '🌐'}
+                                {item.format === 'Python' && '🐍'}
+                                {item.format === 'R' && '📘'}
+                              </div>
+                              <p className="format-text">{item.format} Export</p>
+                              <small className="text-muted">
+                                {item.format === 'JSON' && 'Plotly JSON data'}
+                                {item.format === 'HTML' && 'Interactive HTML file'}
+                                {item.format === 'Python' && 'Python script'}
+                                {item.format === 'R' && 'R script'}
+                              </small>
+                            </div>
+                          )}
                         </div>
                         <p className="text-muted text-center">
                           Saved on: {new Date(item.timestamp).toLocaleString()}

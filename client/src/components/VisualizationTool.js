@@ -2004,7 +2004,7 @@ export(p, file = "visualization.png")
           <div>
             <h3>Total Visualization</h3>
             <div id="plot" ref={plotRef}></div>
-            <WizardStep4 onExport={handleExport} onBack={handleBack} plotRef={plotRef} />
+            <WizardStep4 onExport={handleExport} onBack={handleBack} plotRef={plotRef} visualizationType={visualizationType} />
             <button
               className="custom-viz-button"
               onClick={handleCustomVisualizationRedirect}

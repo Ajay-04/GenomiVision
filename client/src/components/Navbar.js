@@ -85,39 +85,6 @@ const Navbar = () => {
                 <span>History</span>
               </a>
             </li>
-            <li className="sidenav-item">
-              <a className="sidenav-link" href="#" onClick={() => alert('Stats coming soon!')}>
-                <i className="fas fa-chart-pie"></i>
-                <span>Statistics</span>
-              </a>
-            </li>
-            <li className="sidenav-item">
-              <a className="sidenav-link" href="#" onClick={() => alert('Reports coming soon!')}>
-                <i className="fas fa-file-alt"></i>
-                <span>Reports</span>
-              </a>
-            </li>
-            <li className="sidenav-item">
-              <a className="sidenav-link" href="#" onClick={() => alert('Projects coming soon!')}>
-                <i className="fas fa-folder"></i>
-                <span>Projects</span>
-              </a>
-            </li>
-          </ul>
-          <hr />
-          <ul className="sidenav-list">
-            <li className="sidenav-item">
-              <a className="sidenav-link" href="#" onClick={() => alert('Settings coming soon!')}>
-                <i className="fas fa-cog"></i>
-                <span>Settings</span>
-              </a>
-            </li>
-            <li className="sidenav-item">
-              <a className="sidenav-link" href="#" onClick={() => alert('Help coming soon!')}>
-                <i className="fas fa-question-circle"></i>
-                <span>Help</span>
-              </a>
-            </li>
           </ul>
         </div>
       </div>
