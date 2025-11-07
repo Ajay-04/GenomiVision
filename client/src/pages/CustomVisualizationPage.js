@@ -7,15 +7,16 @@ import '../styles/chat.css';
 
 const CustomVisualizationPage = () => {
   const { state } = useLocation();
-  const { inputFileContent } = state || {};
+  const { inputFileContent, uploadedFiles } = state || {};
   const [chatHistory, setChatHistory] = useState([
-    { role: 'assistant', content: '🤖 **GenomiVisual AI Assistant**\n\n Hi I am GenomiVisual AI assistant how can I help you ?' },
+    { role: 'assistant', content: '🤖 **GenomiVisual AI Assistant**\n\n Hi I am GenomiVisual AI assistant! I can help you analyze your uploaded files and create visualizations. What would you like to explore?' },
   ]);
   const [userInput, setUserInput] = useState('');
   const [streamingText, setStreamingText] = useState('');
   const [visualizationData, setVisualizationData] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [files, setFiles] = useState([]);
   const chatContainerRef = useRef(null);
   const plotRef = useRef(null);
 
@@ -33,6 +34,65 @@ const CustomVisualizationPage = () => {
       chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
     }
   }, [chatHistory, streamingText, userInput, visualizationData]);
+
+  // Load user's uploaded files from state/props
+  useEffect(() => {
+    if (uploadedFiles && uploadedFiles.length > 0) {
+      setFiles(uploadedFiles);
+    } else if (inputFileContent) {
+      // If we have file content but no file info, create a basic file object
+      setFiles([{
+        name: 'uploaded_data.csv',
+        type: 'text/csv',
+        size: inputFileContent.length,
+        content: inputFileContent,
+        uploadTime: new Date().toLocaleString()
+      }]);
+    }
+  }, [inputFileContent, uploadedFiles]);
+
+  const handleFileUpload = (event) => {
+    const selectedFiles = Array.from(event.target.files);
+    
+    // Check if adding new files would exceed the limit
+    if (files.length + selectedFiles.length > 3) {
+      alert(`You can only upload up to 3 files. You currently have ${files.length} files.`);
+      return;
+    }
+
+    selectedFiles.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const fileData = {
+          name: file.name,
+          type: file.type,
+          size: file.size,
+          content: e.target.result,
+          uploadTime: new Date().toLocaleString()
+        };
+        
+        setFiles(prev => [...prev, fileData]);
+        
+        // Add a message showing file was uploaded
+        setChatHistory(prev => [...prev, 
+         
+        ]);
+      };
+      reader.readAsText(file);
+    });
+    
+    // Clear the input
+    event.target.value = '';
+  };
+
+  const removeFile = (index) => {
+    const removedFile = files[index];
+    setFiles(prev => prev.filter((_, i) => i !== index));
+    
+    setChatHistory(prev => [...prev, 
+      { role: 'assistant', content: `🗑️ **File Removed**\n\nRemoved: ${removedFile.name}` }
+    ]);
+  };
 
   const sendMessage = async () => {
     if (!userInput.trim()) return;
@@ -57,8 +117,16 @@ const CustomVisualizationPage = () => {
     setIsLoading(true);
     setError('');
 
+    // Prepare file content for the system prompt
+    const allFileContents = files.map(file => 
+      `**File: ${file.name}**\n${file.content}\n\n`
+    ).join('');
+    
+    const fileContentToUse = allFileContents || inputFileContent || 'No file data available';
+
     console.log('🚀 Sending message:', userInput);
-    console.log('📁 File content preview:', inputFileContent?.substring(0, 200) + '...');
+    console.log('📁 Files available:', files.length);
+    console.log('📁 File content preview:', fileContentToUse.substring(0, 200) + '...');
 
     try {
       const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -72,7 +140,11 @@ const CustomVisualizationPage = () => {
           messages: [
             { 
               role: 'system', 
-              content: `You are a helpful genomics data analysis assistant. Use the following file data to answer questions: ${inputFileContent || 'No file data available'}. Include chat history in your context. When asked to visualize data (e.g., 'visualize in bar graph'), provide a response with a JSON object like { "type": "bar", "x": ["x1", "x2", "x3"], "y": [1, 2, 3] } describing the visualization, followed by a text explanation. Always provide helpful analysis even without visualization requests.` 
+              content: `You are a helpful genomics data analysis assistant. You have access to the following uploaded files and their contents:
+
+${fileContentToUse}
+
+Use this data to answer questions and provide insights.` 
             },
             ...newHistory,
           ],
@@ -176,10 +248,11 @@ const CustomVisualizationPage = () => {
   const BotLogo = () => (
     <div className="bot-logo">
       <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="12" cy="12" r="10" stroke="#4CAF50" strokeWidth="2" />
-        <path d="M9 10h6v2H9z" fill="#4CAF50" />
-        <circle cx="9" cy="14" r="1" fill="#4CAF50" />
-        <circle cx="15" cy="14" r="1" fill="#4CAF50" />
+        <rect x="6" y="6" width="12" height="12" rx="3" fill="white"/>
+        <circle cx="9" cy="10" r="1.5" fill="#64748b"/>
+        <circle cx="15" cy="10" r="1.5" fill="#64748b"/>
+        <rect x="10" y="13" width="4" height="1.5" rx="0.75" fill="#64748b"/>
+        <rect x="11" y="3" width="2" height="3" rx="1" fill="white"/>
       </svg>
     </div>
   );
@@ -187,22 +260,25 @@ const CustomVisualizationPage = () => {
   const UserLogo = () => (
     <div className="user-logo">
       <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="12" cy="8" r="4" stroke="#2196F3" strokeWidth="2" />
-        <path d="M6 20c0-3 3-5 6-5s6 2 6 5" stroke="#2196F3" strokeWidth="2" />
+        <circle cx="12" cy="8" r="3" fill="white"/>
+        <path d="M6 18c0-3.31 2.69-6 6-6s6 2.69 6 6" stroke="white" strokeWidth="2" fill="none"/>
+      </svg>
+    </div>
+  );
+
+  const ClipIcon = () => (
+    <div className="clip-icon" onClick={() => document.getElementById('file-upload-input').click()}>
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 15V9M9 12H15" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+        <rect x="5" y="4" width="14" height="16" rx="2" stroke="white" strokeWidth="1.5" fill="none"/>
       </svg>
     </div>
   );
 
   const SendIcon = () => (
     <div className="send-icon" onClick={sendMessage}>
-      <svg viewBox="0 0 24.00 24.00" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="#546dd4">
-        <g id="SVGRepo_bgCarrier" strokeWidth="0"></g>
-        <g id="SVGRepo_tracerCarrier" strokeLinecap="round" strokeLinejoin="round" stroke="#CCCCCC" strokeWidth="0.144">
-          <path d="M11.5003 12H5.41872M5.24634 12.7972L4.24158 15.7986C3.69128 17.4424 3.41613 18.2643 3.61359 18.7704C3.78506 19.21 4.15335 19.5432 4.6078 19.6701C5.13111 19.8161 5.92151 19.4604 7.50231 18.7491L17.6367 14.1886C19.1797 13.4942 19.9512 13.1471 20.1896 12.6648C20.3968 12.2458 20.3968 11.7541 20.1896 11.3351C19.9512 10.8529 19.1797 10.5057 17.6367 9.81135L7.48483 5.24303C5.90879 4.53382 5.12078 4.17921 4.59799 4.32468C4.14397 4.45101 3.77572 4.78336 3.60365 5.22209C3.40551 5.72728 3.67772 6.54741 4.22215 8.18767L5.24829 11.2793C5.34179 11.561 5.38855 11.7019 5.407 11.8459C5.42338 11.9738 5.42321 12.1032 5.40651 12.231C5.38768 12.375 5.34057 12.5157 5.24634 12.7972Z" stroke="#3d84e1" strokeWidth="1.416" strokeLinecap="round" strokeLinejoin="round"></path>
-        </g>
-        <g id="SVGRepo_iconCarrier">
-          <path d="M11.5003 12H5.41872M5.24634 12.7972L4.24158 15.7986C3.69128 17.4424 3.41613 18.2643 3.61359 18.7704C3.78506 19.21 4.15335 19.5432 4.6078 19.6701C5.13111 19.8161 5.92151 19.4604 7.50231 18.7491L17.6367 14.1886C19.1797 13.4942 19.9512 13.1471 20.1896 12.6648C3.96968 12.2458 20.3968 11.7541 20.1896 11.3351C19.9512 10.8529 19.1797 10.5057 17.6367 9.81135L7.48483 5.24303C5.90879 4.53382 5.12078 4.17921 4.59799 4.32468C4.14397 4.45101 3.77572 4.78336 3.60365 5.22209C3.40551 5.72728 3.67772 6.54741 4.22215 8.18767L5.24829 11.2793C5.34179 11.561 5.38855 11.7019 5.407 11.8459C5.42338 11.9738 5.42321 12.1032 5.40651 12.231C5.38768 12.375 5.34057 12.5157 5.24634 12.7972Z" stroke="#3d84e1" strokeWidth="1.416" strokeLinecap="round" strokeLinejoin="round"></path>
-        </g>
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M22 2L11 13M22 2L15 22L11 13M22 2L2 9L11 13" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
       </svg>
     </div>
   );
@@ -212,7 +288,9 @@ const CustomVisualizationPage = () => {
       <Navbar />
       <div className="custom-visualization-page">
         <h2 style={{ marginTop: '1rem' }}>Custom Visualization Chat</h2>
-        <div ref={chatContainerRef} className="chat-container">
+        
+        <div className="chat-layout">
+          <div ref={chatContainerRef} className="chat-container">
           <div>
             {chatHistory.map((message, index) => (
               <div key={index} className={`message-wrapper ${message.role === 'user' ? 'user' : ''}`}>
@@ -258,14 +336,65 @@ const CustomVisualizationPage = () => {
           </div>
           <div className="input-area">
             <input
+              id="file-upload-input"
+              type="file"
+              multiple
+              accept=".csv,.txt,.json,.bed,.vcf,.gtf,.fasta"
+              onChange={handleFileUpload}
+              style={{ display: 'none' }}
+            />
+            <input
               type="text"
               value={userInput}
               onChange={(e) => setUserInput(e.target.value)}
               onKeyPress={handleKeyPress}
               placeholder="Ask me about your data or request a visualization..."
+              className="text-input"
             />
+            <ClipIcon />
             <SendIcon />
           </div>
+          </div>
+
+          {/* Files Sidebar */}
+          {files.length > 0 && (
+            <div className="files-sidebar">
+              <div className="available-files">
+                <h4>📂 Available Files ({files.length})</h4>
+                <p className="files-description">Ready for analysis</p>
+                <div className="file-list">
+                  {files.map((file, index) => (
+                    <div key={index} className="file-item">
+                      <div className="file-icon">
+                        {file.name.endsWith('.csv') && '📊'}
+                        {file.name.endsWith('.vcf') && '🧬'}
+                        {file.name.endsWith('.bed') && '📍'}
+                        {file.name.endsWith('.gtf') && '📋'}
+                        {file.name.endsWith('.fasta') && '🔤'}
+                        {(!file.name.includes('.')) && '📄'}
+                      </div>
+                      <div className="file-info-item">
+                        <span className="file-name">{file.name}</span>
+                        <span className="file-details">
+                          {(file.size / 1024).toFixed(1)} KB
+                        </span>
+                      </div>
+                      <div className="file-actions">
+                        <span className="status-ready">✓</span>
+                        <button 
+                          className="remove-file-btn"
+                          onClick={() => removeFile(index)}
+                          title="Remove file"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

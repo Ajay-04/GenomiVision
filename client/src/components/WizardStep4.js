@@ -115,8 +115,46 @@ const WizardStep4 = ({ onBack, plotRef, onExport, visualizationType }) => {
   };
 
   return (
-    <div className="wizard-step">
-      <h3>Step 4: Save Visualization</h3>
+    <>
+      {/* Display current visualization type - Professional design */}
+      <div style={{
+        textAlign: 'center',
+        marginBottom: '30px'
+      }}>
+        <div style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '12px',
+          padding: '18px 32px',
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          borderRadius: '16px',
+          fontSize: '22px',
+          fontWeight: '600',
+          color: '#ffffff',
+          boxShadow: '0 8px 32px rgba(102, 126, 234, 0.3)',
+          border: '1px solid rgba(255, 255, 255, 0.2)',
+          backdropFilter: 'blur(10px)',
+          transition: 'all 0.3s ease',
+          cursor: 'default',
+          fontFamily: '"Inter", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif',
+          letterSpacing: '0.5px'
+        }}>
+          <span style={{
+            fontSize: '28px',
+            filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))'
+          }}>
+            📊
+          </span>
+          <span style={{
+            textShadow: '0 2px 4px rgba(0,0,0,0.2)'
+          }}>
+            {chartTypeNames[visualizationType] || visualizationType || 'Custom Visualization'}
+          </span>
+        </div>
+      </div>
+
+      <div className="wizard-step">
+        <h3>Step 4: Save Visualization</h3>
       {error && <div className="error-message" style={{ color: 'red' }}>{error}</div>}
       {successMessage && (
         <div className="success-message" style={{ color: 'green', textAlign: 'center' }}>
@@ -169,6 +207,7 @@ const WizardStep4 = ({ onBack, plotRef, onExport, visualizationType }) => {
         </button>
       </div>
     </div>
+    </>
   );
 };
 

@@ -277,13 +277,6 @@ const RecentActivity = () => {
                           <i className="fas fa-chart-line"></i>
                           Visualize
                         </button>
-                        <button 
-                          className="btn btn-secondary btn-sm"
-                          title="View file details"
-                        >
-                          <i className="fas fa-eye"></i>
-                          Details
-                        </button>
                       </div>
                     </div>
                   ))}
