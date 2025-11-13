@@ -112,7 +112,14 @@ const WizardStep1 = ({ onUpload, onBack }) => {
         
         try {
           const res = await axios.post('http://localhost:5000/api/data/upload', formData, {
-            withCredentials: true, 
+            withCredentials: true,
+            maxContentLength: Infinity, // Allow files up to 1GB
+            maxBodyLength: Infinity, // Allow request body up to 1GB
+            timeout: 900000, // 15 minutes timeout for large file uploads
+            onUploadProgress: (progressEvent) => {
+              const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+              console.log(`Upload progress for ${file.name}: ${percentCompleted}%`);
+            },
           });
           console.log('Backend response for', file.name, ':', res.data);
         } catch (err) {

@@ -83,8 +83,9 @@ app.use(cors({
   credentials: true,
 }));
 
-// Parse JSON bodies
-app.use(express.json());
+// Parse JSON bodies with increased limit for large payloads
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Session middleware
 app.use(session({
@@ -139,7 +140,7 @@ const upload = multer({
       cb(new Error('Invalid file type. Only .fasta, .bed, .vcf, .gtf are allowed.'), false);
     }
   },
-  limits: { fileSize: 10 * 1024 * 1024 },
+  limits: { fileSize: 1024 * 1024 * 1024 }, // 1GB limit
 });
 
 // Create uploads directory
