@@ -1,6 +1,6 @@
 :root {
     --navbar-height: 50px;
-    --sidenav-width: 200px;
+    --sidenav-width: 172.8px;
     --padding: 1rem;
     --chat-margin: 1rem;
     --chat-height: calc(100vh - 140px);
@@ -34,11 +34,11 @@
     padding-top: calc(var(--navbar-height) + 1rem);
     padding-right: var(--padding);
     padding-bottom: var(--padding);
-    padding-left: var(--padding);
+    padding-left: calc(var(--sidenav-width) + var(--padding));
     margin: 0 auto;
     box-sizing: border-box;
     min-height: calc(100vh - var(--navbar-height));
-    max-width: 1200px;
+    max-width: calc(1200px + var(--sidenav-width));
     width: 100%;
     display: flex;
     flex-direction: column;
@@ -443,6 +443,14 @@
   
   /* Enhanced responsive design */
   @media (max-width: 1024px) {
+    .custom-visualization-page {
+      padding-left: calc(var(--sidenav-width) + 2rem);
+      padding-right: 2rem;
+    }
+  }
+  
+  /* Mobile responsive - sidebar is hidden */
+  @media (max-width: 552.6px) {
     .custom-visualization-page {
       padding-left: 2rem;
       padding-right: 2rem;

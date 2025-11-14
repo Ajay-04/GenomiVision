@@ -1958,11 +1958,16 @@ export(p, file = "visualization.png")
   };
 
   const handleCustomVisualizationRedirect = () => {
-    if (datasets.length > 0 && visualizationType) {
-      navigate('/custom-visualization', { state: { datasets, visualizationType, mergedData } });
-    } else {
-      alert('Please upload files and select a visualization type first.');
-    }
+    // Navigate to custom visualization with current session files
+    navigate('/custom-visualization', { 
+      state: { 
+        datasets, 
+        visualizationType, 
+        mergedData,
+        fromWizard: true,
+        wizardFiles: datasets // Pass the current wizard session files
+      } 
+    });
   };
 
   return (

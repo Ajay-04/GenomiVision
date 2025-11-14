@@ -7,9 +7,11 @@ import '../styles/chat.css';
 
 const CustomVisualizationPage = () => {
   const { state } = useLocation();
-  const { inputFileContent, uploadedFiles } = state || {};
+  const { inputFileContent, uploadedFiles, fromWizard, wizardFiles } = state || {};
   const [chatHistory, setChatHistory] = useState([
-    { role: 'assistant', content: '🤖 **GenomiVisual AI Assistant**\n\n Hi I am GenomiVisual AI assistant! I can help you analyze your uploaded files and create visualizations. What would you like to explore?' },
+    { role: 'assistant', content: fromWizard ? 
+      '🤖 **GenomiVisual AI Assistant**\n\nWelcome to Custom Visualization! I can see you\'ve uploaded files through the wizard. I\'ll load your files automatically and help you create custom visualizations. What would you like to explore?' :
+      '🤖 **GenomiVisual AI Assistant**\n\nHi! I am GenomiVisual AI assistant! I can help you analyze your uploaded files and create visualizations. What would you like to explore?' },
   ]);
   const [userInput, setUserInput] = useState('');
   const [streamingText, setStreamingText] = useState('');
@@ -19,6 +21,7 @@ const CustomVisualizationPage = () => {
   const [files, setFiles] = useState([]);
   const chatContainerRef = useRef(null);
   const plotRef = useRef(null);
+  const filesLoadedRef = useRef(false);
 
   // Debug and error handling
   useEffect(() => {
@@ -35,62 +38,111 @@ const CustomVisualizationPage = () => {
     }
   }, [chatHistory, streamingText, userInput, visualizationData]);
 
-  // Load user's uploaded files from state/props
+  // Load files based on source (wizard session or database)
   useEffect(() => {
-    if (uploadedFiles && uploadedFiles.length > 0) {
-      setFiles(uploadedFiles);
-    } else if (inputFileContent) {
-      // If we have file content but no file info, create a basic file object
-      setFiles([{
-        name: 'uploaded_data.csv',
-        type: 'text/csv',
-        size: inputFileContent.length,
-        content: inputFileContent,
-        uploadTime: new Date().toLocaleString()
-      }]);
-    }
-  }, [inputFileContent, uploadedFiles]);
-
-  const handleFileUpload = (event) => {
-    const selectedFiles = Array.from(event.target.files);
-    
-    // Check if adding new files would exceed the limit
-    if (files.length + selectedFiles.length > 3) {
-      alert(`You can only upload up to 3 files. You currently have ${files.length} files.`);
-      return;
-    }
-
-    selectedFiles.forEach(file => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const fileData = {
-          name: file.name,
-          type: file.type,
-          size: file.size,
-          content: e.target.result,
-          uploadTime: new Date().toLocaleString()
-        };
+    const loadFiles = async () => {
+      if (fromWizard && wizardFiles && wizardFiles.length > 0) {
+        // Use wizard session files
+        const wizardFilesFormatted = wizardFiles.map(dataset => ({
+          name: dataset.fileName,
+          type: getFileType(dataset.fileName),
+          size: dataset.content ? dataset.content.length : 0,
+          content: dataset.content,
+          uploadTime: new Date().toLocaleString(),
+          id: dataset.id
+        }));
         
-        setFiles(prev => [...prev, fileData]);
+        setFiles(wizardFilesFormatted);
         
-        // Add a message showing file was uploaded
-        setChatHistory(prev => [...prev, 
-         
-        ]);
-      };
-      reader.readAsText(file);
-    });
+        if (wizardFilesFormatted.length > 0 && !filesLoadedRef.current) {
+          filesLoadedRef.current = true;
+          setChatHistory(prev => [...prev, 
+            { role: 'assistant', content: `📂 **Wizard Files Loaded**\n\nI've loaded ${wizardFilesFormatted.length} file${wizardFilesFormatted.length !== 1 ? 's' : ''} from your current wizard session:\n\n${wizardFilesFormatted.map(f => `• ${f.name} (${(f.size / 1024).toFixed(1)} KB)`).join('\n')}\n\nThese files are ready for analysis! Ask me anything about your data.` }
+          ]);
+        }
+      } else {
+        // Fallback to database files or legacy props
+        try {
+          const response = await fetch('http://localhost:5000/api/users/files', {
+            credentials: 'include'
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            const filesWithContent = [];
+            
+            // Fetch content for each file
+            for (const file of data.files) {
+              try {
+                const contentResponse = await fetch(`http://localhost:5000/api/users/files/${file.id}/content`, {
+                  credentials: 'include'
+                });
+                
+                if (contentResponse.ok) {
+                  const contentData = await contentResponse.json();
+                  filesWithContent.push({
+                    name: file.filename,
+                    type: getFileType(file.filename),
+                    size: file.size,
+                    content: contentData.content,
+                    uploadTime: new Date(file.uploadDate).toLocaleString(),
+                    id: file.id
+                  });
+                }
+              } catch (err) {
+                console.warn(`Failed to fetch content for ${file.filename}:`, err);
+              }
+            }
+            
+            setFiles(filesWithContent);
+            
+            if (filesWithContent.length > 0 && !filesLoadedRef.current) {
+              filesLoadedRef.current = true;
+              setChatHistory(prev => [...prev, 
+                { role: 'assistant', content: `📂 **Files Loaded**\n\nI've loaded ${filesWithContent.length} file${filesWithContent.length !== 1 ? 's' : ''} from your previous uploads:\n\n${filesWithContent.map(f => `• ${f.name} (${(f.size / 1024).toFixed(1)} KB)`).join('\n')}\n\nThese files are ready for analysis! Ask me anything about your data.` }
+              ]);
+            }
+          }
+        } catch (err) {
+          console.error('Failed to fetch uploaded files:', err);
+          // Final fallback to legacy props
+          if (uploadedFiles && uploadedFiles.length > 0) {
+            setFiles(uploadedFiles);
+          } else if (inputFileContent) {
+            setFiles([{
+              name: 'uploaded_data.csv',
+              type: 'text/csv',
+              size: inputFileContent.length,
+              content: inputFileContent,
+              uploadTime: new Date().toLocaleString()
+            }]);
+          }
+        }
+      }
+    };
     
-    // Clear the input
-    event.target.value = '';
+    loadFiles();
+  }, [fromWizard, wizardFiles]);
+  
+  const getFileType = (filename) => {
+    const ext = filename.split('.').pop().toLowerCase();
+    switch (ext) {
+      case 'csv': return 'text/csv';
+      case 'vcf': return 'text/vcf';
+      case 'bed': return 'text/bed';
+      case 'gtf': return 'text/gtf';
+      case 'fasta': return 'text/fasta';
+      default: return 'text/plain';
+    }
   };
+
 
   const removeFile = (index) => {
     const removedFile = files[index];
     setFiles(prev => prev.filter((_, i) => i !== index));
     
     setChatHistory(prev => [...prev, 
-      { role: 'assistant', content: `🗑️ **File Removed**\n\nRemoved: ${removedFile.name}` }
+      { role: 'assistant', content: `🗑️ **File Removed**\n\nRemoved: ${removedFile.name}\n\nNote: This file is still available in your uploads. To permanently delete files, please use the main dashboard.` }
     ]);
   };
 
@@ -266,14 +318,6 @@ Use this data to answer questions and provide insights.`
     </div>
   );
 
-  const ClipIcon = () => (
-    <div className="clip-icon" onClick={() => document.getElementById('file-upload-input').click()}>
-      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M12 15V9M9 12H15" stroke="white" strokeWidth="2" strokeLinecap="round"/>
-        <rect x="5" y="4" width="14" height="16" rx="2" stroke="white" strokeWidth="1.5" fill="none"/>
-      </svg>
-    </div>
-  );
 
   const SendIcon = () => (
     <div className="send-icon" onClick={sendMessage}>
@@ -336,14 +380,6 @@ Use this data to answer questions and provide insights.`
           </div>
           <div className="input-area">
             <input
-              id="file-upload-input"
-              type="file"
-              multiple
-              accept=".csv,.txt,.json,.bed,.vcf,.gtf,.fasta"
-              onChange={handleFileUpload}
-              style={{ display: 'none' }}
-            />
-            <input
               type="text"
               value={userInput}
               onChange={(e) => setUserInput(e.target.value)}
@@ -351,7 +387,6 @@ Use this data to answer questions and provide insights.`
               placeholder="Ask me about your data or request a visualization..."
               className="text-input"
             />
-            <ClipIcon />
             <SendIcon />
           </div>
           </div>

@@ -346,6 +346,85 @@ app.get('/api/users/stats', authenticateUser, async (req, res) => {
   }
 });
 
+// Get user's uploaded files endpoint
+app.get('/api/users/files', authenticateUser, async (req, res) => {
+  try {
+    const userId = req.session.userId;
+    const userFiles = [];
+    
+    try {
+      const uploadsSnapshot = await db.ref('uploads').once('value');
+      const uploadsData = uploadsSnapshot.val();
+
+      if (uploadsData) {
+        Object.entries(uploadsData).forEach(([key, upload]) => {
+          // Get file uploads (uploads with userId and file data)
+          if (upload.userId === userId && upload.filename && upload.path) {
+            userFiles.push({
+              id: key,
+              filename: upload.filename,
+              path: upload.path,
+              size: upload.size,
+              uploadDate: upload.uploadDate
+            });
+          }
+        });
+      }
+      
+      // Sort by upload date (newest first)
+      userFiles.sort((a, b) => (b.uploadDate || 0) - (a.uploadDate || 0));
+      
+    } catch (firebaseErr) {
+      console.error('Firebase error:', firebaseErr);
+      return res.status(500).json({ message: 'Failed to fetch files from database' });
+    }
+
+    res.json({ files: userFiles });
+  } catch (err) {
+    console.error('Error fetching user files:', err);
+    res.status(500).json({ message: 'Failed to fetch user files' });
+  }
+});
+
+// Get specific file content endpoint
+app.get('/api/users/files/:fileId/content', authenticateUser, async (req, res) => {
+  try {
+    const userId = req.session.userId;
+    const fileId = req.params.fileId;
+    
+    try {
+      const fileSnapshot = await db.ref(`uploads/${fileId}`).once('value');
+      const fileData = fileSnapshot.val();
+
+      if (!fileData || fileData.userId !== userId) {
+        return res.status(404).json({ message: 'File not found or access denied' });
+      }
+
+      // Read file content from disk
+      const filePath = fileData.path;
+      if (!fs.existsSync(filePath)) {
+        return res.status(404).json({ message: 'File not found on disk' });
+      }
+
+      const content = fs.readFileSync(filePath, 'utf8');
+      res.json({ 
+        content,
+        filename: fileData.filename,
+        size: fileData.size,
+        uploadDate: fileData.uploadDate
+      });
+      
+    } catch (firebaseErr) {
+      console.error('Firebase error:', firebaseErr);
+      return res.status(500).json({ message: 'Failed to fetch file from database' });
+    }
+
+  } catch (err) {
+    console.error('Error fetching file content:', err);
+    res.status(500).json({ message: 'Failed to fetch file content' });
+  }
+});
+
 // Proxy Groq Chat Completions via server-side API key (more secure)
 app.post('/api/groq/chat', authenticateUser, async (req, res) => {
   try {
