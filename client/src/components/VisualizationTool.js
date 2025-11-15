@@ -1388,6 +1388,7 @@ export(p, file = "visualization.png")
         const surfaceZ = [];
         const surfaceX = [];
         const surfaceY = [];
+        const surfaceHoverText = [];
         
         // Create coordinate arrays for surface
         for (let i = 0; i < gridSize; i++) {
@@ -1398,32 +1399,62 @@ export(p, file = "visualization.png")
         // Create a grid for surface plot with better interpolation
         for (let i = 0; i < gridSize; i++) {
           const row = [];
+          const hoverRow = [];
           for (let j = 0; j < gridSize; j++) {
             const index = i * gridSize + j;
             let value;
+            let hoverText = '';
             
             if (dataToRender.processedDatasets && dataToRender.processedDatasets[0]) {
               const dataset = dataToRender.processedDatasets[0];
               const rows = dataset.rows || [];
+              const headers = dataset.headers || [];
               
               if (index < rows.length && rows[index]) {
-                value = parseFloat(rows[index][2]) || parseFloat(rows[index][1]) || 0;
+                const dataRow = rows[index];
+                value = parseFloat(dataRow[2]) || parseFloat(dataRow[1]) || 0;
+                
+                // Build hover text in the same format as 3D bubble plot
+                hoverText = `${headers[0] || 'Point'}: ${dataRow[0] || index + 1}<br>`;
+                let usedHeaders = new Set();
+                usedHeaders.add(headers[0]);
+                headers.forEach((header, colIndex) => {
+                  if (colIndex < dataRow.length && colIndex > 0 && !usedHeaders.has(header)) {
+                    hoverText += `${header}: ${dataRow[colIndex]}<br>`;
+                    usedHeaders.add(header);
+                  }
+                });
+                if (dataToRender.processedDatasets && dataToRender.processedDatasets.length > 1) {
+                  dataToRender.processedDatasets.forEach((otherDataset, datasetIndex) => {
+                    if (datasetIndex > 0 && otherDataset.rows && otherDataset.rows[index]) {
+                      const otherRow = otherDataset.rows[index];
+                      const otherHeaders = otherDataset.headers || [];
+                      otherHeaders.forEach((header, colIndex) => {
+                        if (colIndex < otherRow.length && otherRow[colIndex] !== undefined && otherRow[colIndex] !== '' && !usedHeaders.has(header)) {
+                          hoverText += `${header}: ${otherRow[colIndex]}<br>`;
+                          usedHeaders.add(header);
+                        }
+                      });
+                    }
+                  });
+                }
               } else {
                 // Better interpolation using nearby values
-                const nearbyIndices = [];
+                const nearbyValues = [];
                 for (let di = -1; di <= 1; di++) {
                   for (let dj = -1; dj <= 1; dj++) {
                     const ni = i + di;
                     const nj = j + dj;
                     const nIndex = ni * gridSize + nj;
                     if (ni >= 0 && ni < gridSize && nj >= 0 && nj < gridSize && nIndex < rows.length && rows[nIndex]) {
-                      nearbyIndices.push(parseFloat(rows[nIndex][2]) || parseFloat(rows[nIndex][1]) || 0);
+                      nearbyValues.push(parseFloat(rows[nIndex][2]) || parseFloat(rows[nIndex][1]) || 0);
                     }
                   }
                 }
-                value = nearbyIndices.length > 0 ? 
-                  nearbyIndices.reduce((a, b) => a + b, 0) / nearbyIndices.length :
+                value = nearbyValues.length > 0 ? 
+                  nearbyValues.reduce((a, b) => a + b, 0) / nearbyValues.length :
                   Math.sin(i * 0.5) * Math.cos(j * 0.5) * 20;
+                hoverText = `${dataToRender.processedDatasets?.[0]?.headers?.[0] || 'First Column'} index: ${i}<br>${dataToRender.processedDatasets?.[0]?.headers?.[1] || 'Second Column'} index: ${j}<br>Interpolated value: ${value.toFixed(2)}`;
               }
             } else {
               if (index < y.length) {
@@ -1432,11 +1463,14 @@ export(p, file = "visualization.png")
                 // Create a smooth mathematical surface
                 value = Math.sin(i * 0.3) * Math.cos(j * 0.3) * 25 + Math.random() * 5;
               }
+              hoverText = `X index: ${i}<br>Y index: ${j}<br>Value: ${value.toFixed(2)}`;
             }
             
             row.push(value);
+            hoverRow.push(hoverText);
           }
           surfaceZ.push(row);
+          surfaceHoverText.push(hoverRow);
         }
         
         plotData = [{
@@ -1471,7 +1505,8 @@ export(p, file = "visualization.png")
             specular: 0.05,
             roughness: 0.1
           },
-          hovertemplate: `${dataToRender.processedDatasets?.[0]?.headers?.[0] || 'First Column'}: %{x}<br>${dataToRender.processedDatasets?.[0]?.headers?.[1] || 'Second Column'}: %{y}<br>${dataToRender.processedDatasets?.[0]?.headers?.[2] || 'Third Column'}: %{z}<extra></extra>`
+          text: surfaceHoverText,
+          hovertemplate: '%{text}<extra></extra>'
         }];
         
         layout = {
@@ -1510,13 +1545,30 @@ export(p, file = "visualization.png")
                 yMesh.push(parseFloat(row[1]) || j * 10);
                 zMesh.push(parseFloat(row[2]) || Math.random() * 30);
                 
-                // Create hover text
-                let text = `Point ${index + 1}<br>`;
-                headers.forEach((header, k) => {
-                  if (k < row.length) {
-                    text += `${header}: ${row[k]}<br>`;
+                // Build hover text in the same format as 3D bubble plot
+                let text = `${headers[0] || 'Point'}: ${row[0] || index + 1}<br>`;
+                let usedHeaders = new Set();
+                usedHeaders.add(headers[0]);
+                headers.forEach((header, colIndex) => {
+                  if (colIndex < row.length && colIndex > 0 && !usedHeaders.has(header)) {
+                    text += `${header}: ${row[colIndex]}<br>`;
+                    usedHeaders.add(header);
                   }
                 });
+                if (dataToRender.processedDatasets && dataToRender.processedDatasets.length > 1) {
+                  dataToRender.processedDatasets.forEach((otherDataset, datasetIndex) => {
+                    if (datasetIndex > 0 && otherDataset.rows && otherDataset.rows[index]) {
+                      const otherRow = otherDataset.rows[index];
+                      const otherHeaders = otherDataset.headers || [];
+                      otherHeaders.forEach((header, colIndex) => {
+                        if (colIndex < otherRow.length && otherRow[colIndex] !== undefined && otherRow[colIndex] !== '' && !usedHeaders.has(header)) {
+                          text += `${header}: ${otherRow[colIndex]}<br>`;
+                          usedHeaders.add(header);
+                        }
+                      });
+                    }
+                  });
+                }
                 hoverMesh.push(text);
               }
             }
@@ -1623,6 +1675,7 @@ export(p, file = "visualization.png")
         // 3D Volume plot for voxel-based rendering with improved data structure
         const volumeSize = Math.max(Math.ceil(Math.cbrt(Math.min(x.length, 64))), 3);
         const volumeData = [];
+        const volumeHoverText = [];
         let minValue = Infinity, maxValue = -Infinity;
         
         // Create 3D volume data with better value distribution
@@ -1631,13 +1684,41 @@ export(p, file = "visualization.png")
             for (let k = 0; k < volumeSize; k++) {
               const index = i * volumeSize * volumeSize + j * volumeSize + k;
               let value;
+              let hoverText = '';
               
               if (dataToRender.processedDatasets && dataToRender.processedDatasets[0]) {
                 const dataset = dataToRender.processedDatasets[0];
                 const rows = dataset.rows || [];
+                const headers = dataset.headers || [];
                 
                 if (index < rows.length && rows[index]) {
-                  value = parseFloat(rows[index][2]) || parseFloat(rows[index][1]) || 0;
+                  const dataRow = rows[index];
+                  value = parseFloat(dataRow[2]) || parseFloat(dataRow[1]) || 0;
+                  
+                  // Build hover text in the same format as 3D bubble plot
+                  hoverText = `${headers[0] || 'Point'}: ${dataRow[0] || index + 1}<br>`;
+                  let usedHeaders = new Set();
+                  usedHeaders.add(headers[0]);
+                  headers.forEach((header, colIndex) => {
+                    if (colIndex < dataRow.length && colIndex > 0 && !usedHeaders.has(header)) {
+                      hoverText += `${header}: ${dataRow[colIndex]}<br>`;
+                      usedHeaders.add(header);
+                    }
+                  });
+                  if (dataToRender.processedDatasets && dataToRender.processedDatasets.length > 1) {
+                    dataToRender.processedDatasets.forEach((otherDataset, datasetIndex) => {
+                      if (datasetIndex > 0 && otherDataset.rows && otherDataset.rows[index]) {
+                        const otherRow = otherDataset.rows[index];
+                        const otherHeaders = otherDataset.headers || [];
+                        otherHeaders.forEach((header, colIndex) => {
+                          if (colIndex < otherRow.length && otherRow[colIndex] !== undefined && otherRow[colIndex] !== '' && !usedHeaders.has(header)) {
+                            hoverText += `${header}: ${otherRow[colIndex]}<br>`;
+                            usedHeaders.add(header);
+                          }
+                        });
+                      }
+                    });
+                  }
                 } else {
                   // Create a 3D Gaussian-like distribution
                   const centerX = volumeSize / 2;
@@ -1649,6 +1730,7 @@ export(p, file = "visualization.png")
                     Math.pow(k - centerZ, 2)
                   );
                   value = Math.exp(-distance * 0.3) * 100 + Math.random() * 10;
+                  hoverText = `${dataToRender.processedDatasets?.[0]?.headers?.[0] || 'First Column'} index: ${i}<br>${dataToRender.processedDatasets?.[0]?.headers?.[1] || 'Second Column'} index: ${j}<br>${dataToRender.processedDatasets?.[0]?.headers?.[2] || 'Third Column'} index: ${k}<br>Value: ${value.toFixed(2)}`;
                 }
               } else {
                 if (index < y.length) {
@@ -1657,9 +1739,11 @@ export(p, file = "visualization.png")
                   // Create a 3D pattern
                   value = Math.sin(i * 0.5) * Math.cos(j * 0.5) * Math.sin(k * 0.5) * 50 + 25;
                 }
+                hoverText = `X index: ${i}<br>Y index: ${j}<br>Z index: ${k}<br>Value: ${value.toFixed(2)}`;
               }
               
               volumeData.push([i, j, k, value]);
+              volumeHoverText.push(hoverText);
               minValue = Math.min(minValue, value);
               maxValue = Math.max(maxValue, value);
             }
@@ -1687,7 +1771,8 @@ export(p, file = "visualization.png")
             y: { show: false },
             z: { show: false }
           },
-          hovertemplate: `${dataToRender.processedDatasets?.[0]?.headers?.[0] || 'First Column'}: %{x}<br>${dataToRender.processedDatasets?.[0]?.headers?.[1] || 'Second Column'}: %{y}<br>${dataToRender.processedDatasets?.[0]?.headers?.[2] || 'Third Column'}: %{z}<br>Value: %{value}<extra></extra>`
+          text: volumeHoverText,
+          hovertemplate: '%{text}<extra></extra>'
         }];
         
         layout = {
