@@ -27,12 +27,6 @@ const WizardStep2 = ({ onSelect, onBack }) => {
     allele_frequency: '📊',
     phylogenetic_tree: '🌳',
     
-    // Time Series
-    time_series: '⏰',
-    stacked_area: '📊',
-    
-    // Geographic
-    geographic_map: '🗺️',
     
     // Quality Control
     histogram: '📊',
@@ -51,7 +45,7 @@ const WizardStep2 = ({ onSelect, onBack }) => {
   const categories = {
     'Basic Visualizations': [
       { id: 'bar_chart', name: 'Bar Chart', description: 'Compare categorical data' },
-      { id: 'line_chart', name: 'Line Chart', description: 'Show trends over time' },
+      { id: 'line_chart', name: 'Line Chart', description: 'Show trends and relationships' },
       { id: 'scatter_plot', name: 'Scatter Plot', description: 'Show relationships between variables' },
       { id: 'heatmap', name: 'Heatmap', description: 'Show data intensity with colors' },
       { id: 'histogram', name: 'Histogram', description: 'Show data distribution' }
@@ -75,18 +69,19 @@ const WizardStep2 = ({ onSelect, onBack }) => {
       { id: 'allele_frequency', name: 'Allele Frequency', description: 'Variant frequency distribution' },
       { id: 'phylogenetic_tree', name: 'Phylogenetic Tree', description: 'Evolutionary relationships' }
     ],
-    'Temporal & Geographic': [
-      { id: 'time_series', name: 'Time Series', description: 'Changes over time' },
-      { id: 'stacked_area', name: 'Stacked Area Chart', description: 'Composition over time' },
-      { id: 'geographic_map', name: 'Geographic Map', description: 'Spatial distribution' }
-    ],
+    // Commented out temporal and geographic visualizations
+    // 'Temporal & Geographic': [
+    //   { id: 'time_series', name: 'Time Series', description: 'Changes over time' },
+    //   { id: 'stacked_area', name: 'Stacked Area Chart', description: 'Composition over time' },
+    //   { id: 'geographic_map', name: 'Geographic Map', description: 'Spatial distribution' }
+    // ],
     '3D Visualizations': [
       { id: 'scatter_3d', name: '3D Scatter Plot', description: 'Three-dimensional scatter with X, Y, Z axes' },
       { id: 'bubble_3d', name: '3D Bubble Scatter', description: '3D scatter with size mapping for 4th dimension' },
       { id: 'surface_3d', name: '3D Surface Plot', description: 'Continuous surface visualization in 3D space' },
       { id: 'mesh_3d', name: '3D Mesh Plot', description: '3D hulls and surfaces around data clusters' },
       { id: 'volume_3d', name: '3D Volume Plot', description: 'Voxel-based 3D rendering for density data' },
-      { id: 'line_3d', name: '3D Line/Trajectory Plot', description: 'Temporal evolution in 3D space' },
+      { id: 'line_3d', name: '3D Line/Trajectory Plot', description: 'Data evolution in 3D space' },
       { id: 'network_3d', name: '3D Network Visualization', description: 'Gene/protein networks in 3D space' }
     ]
   };

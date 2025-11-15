@@ -887,17 +887,66 @@ export(p, file = "visualization.png")
         break;
 
       case 'histogram':
+        // Enhanced histogram with proper column name labeling
+        let histogramHoverText = [];
+        
+        // Create hover text with column name : value format
+        if (dataToRender.processedDatasets && dataToRender.processedDatasets[0]) {
+          const dataset = dataToRender.processedDatasets[0];
+          const headers = dataset.headers || [];
+          
+          histogramHoverText = y.map((value, i) => 
+            `${headers[1] || 'Value'}: ${value}`
+          );
+        }
+        
         plotData = [{
           x: y,
           type: 'histogram',
           marker: { color: colorPalette[0] },
-          nbinsx: 20
+          nbinsx: 20,
+          hovertemplate: dataToRender.processedDatasets?.[0]?.headers?.[1] ? 
+            `${dataToRender.processedDatasets[0].headers[1]}: %{x}<br>Frequency: %{y}<extra></extra>` :
+            'Value: %{x}<br>Frequency: %{y}<extra></extra>'
         }];
-        layout.xaxis.title = 'Value';
+        layout.xaxis.title = dataToRender.processedDatasets?.[0]?.headers?.[1] || 'Value';
         layout.yaxis.title = 'Frequency';
         break;
 
       case 'genome browser':
+        // Enhanced genome browser with proper column name labeling
+        let genomeBrowserHoverText = [];
+        
+        // Create hover text with column name : value format
+        if (dataToRender.processedDatasets && dataToRender.processedDatasets[0]) {
+          const dataset = dataToRender.processedDatasets[0];
+          const rows = dataset.rows || [];
+          const headers = dataset.headers || [];
+          
+          genomeBrowserHoverText = rows.map((row, i) => {
+            let text = `${headers[0] || 'Position'}: ${row[0] || x[i]}<br>`;
+            let usedHeaders = new Set();
+            
+            // Add the first column to used headers to prevent duplicates
+            usedHeaders.add(headers[0]);
+            
+            // Show all selected columns from the current dataset (skip first column as it's already shown)
+            headers.forEach((header, j) => {
+              if (j < row.length && j > 0 && !usedHeaders.has(header)) {
+                text += `${header}: ${row[j]}<br>`;
+                usedHeaders.add(header);
+              }
+            });
+            
+            return text;
+          });
+        } else {
+          // Fallback hover text
+          genomeBrowserHoverText = x.map((label, i) => 
+            `${xAxisTitle || 'Position'}: ${label}<br>${yAxisTitle || 'Value'}: ${y[i]}`
+          );
+        }
+        
         plotData = [{
           x: x,
           y: y,
@@ -907,7 +956,11 @@ export(p, file = "visualization.png")
             color: x.map((_, i) => colorPalette[i % colorPalette.length]),
             size: 8,
           },
+          hovertext: genomeBrowserHoverText,
+          hovertemplate: '%{hovertext}<extra></extra>'
         }];
+        layout.xaxis.title = dataToRender.processedDatasets?.[0]?.headers?.[0] || 'Genomic Position';
+        layout.yaxis.title = dataToRender.processedDatasets?.[0]?.headers?.[1] || 'Value';
         break;
 
       case 'pca plot':
@@ -1025,7 +1078,57 @@ export(p, file = "visualization.png")
         break;
 
       case 'phylogenetic tree':
-        // Simple dendrogram representation
+        // Enhanced phylogenetic tree with proper column name labeling
+        let phyloHoverText = [];
+        
+        // Create hover text with column name : value format
+        if (dataToRender.processedDatasets && dataToRender.processedDatasets[0]) {
+          const dataset = dataToRender.processedDatasets[0];
+          const rows = dataset.rows || [];
+          const headers = dataset.headers || [];
+          
+          phyloHoverText = rows.map((row, i) => {
+            let text = `${headers[0] || 'Species'}: ${row[0] || x[i]}<br>`;
+            let usedHeaders = new Set();
+            
+            // Add the first column to used headers to prevent duplicates
+            usedHeaders.add(headers[0]);
+            
+            // Show all selected columns from the current dataset (skip first column as it's already shown)
+            headers.forEach((header, j) => {
+              if (j < row.length && j > 0 && !usedHeaders.has(header)) {
+                text += `${header}: ${row[j]}<br>`;
+                usedHeaders.add(header);
+              }
+            });
+            
+            // Add data from other datasets if available (avoid duplicates)
+            if (dataToRender.processedDatasets && dataToRender.processedDatasets.length > 1) {
+              dataToRender.processedDatasets.forEach((otherDataset, datasetIndex) => {
+                if (datasetIndex > 0 && otherDataset.rows && otherDataset.rows[i]) {
+                  const otherRow = otherDataset.rows[i];
+                  const otherHeaders = otherDataset.headers || [];
+                  
+                  // Add columns from other datasets (only if not already shown)
+                  otherHeaders.forEach((header, j) => {
+                    if (j < otherRow.length && otherRow[j] !== undefined && otherRow[j] !== '' && !usedHeaders.has(header)) {
+                      text += `${header}: ${otherRow[j]}<br>`;
+                      usedHeaders.add(header);
+                    }
+                  });
+                }
+              });
+            }
+            
+            return text;
+          });
+        } else {
+          // Fallback hover text
+          phyloHoverText = x.map((label, i) => 
+            `${xAxisTitle || 'Species'}: ${label}<br>${yAxisTitle || 'Distance'}: ${y[i]}`
+          );
+        }
+        
         plotData = [{
           x: x,
           y: y,
@@ -1035,71 +1138,16 @@ export(p, file = "visualization.png")
             color: x.map((_, i) => colorPalette[i % colorPalette.length]),
             size: 12
           },
-          line: { color: 'gray', width: 2 }
+          line: { color: 'gray', width: 2 },
+          hovertext: phyloHoverText,
+          hovertemplate: '%{hovertext}<extra></extra>'
         }];
-        layout.xaxis.title = 'Species/Samples';
-        layout.yaxis.title = 'Evolutionary Distance';
+        layout.xaxis.title = dataToRender.processedDatasets?.[0]?.headers?.[0] || 'Species/Samples';
+        layout.yaxis.title = dataToRender.processedDatasets?.[0]?.headers?.[1] || 'Evolutionary Distance';
         break;
 
-      case 'time series':
-        plotData = [{
-          x: x.map((_, i) => `Time ${i + 1}`),
-          y: y,
-          type: 'scatter',
-          mode: 'lines+markers',
-          marker: { color: colorPalette[0], size: 8 },
-          line: { color: colorPalette[0], width: 3 }
-        }];
-        layout.xaxis.title = 'Time Points';
-        layout.yaxis.title = 'Expression Level';
-        break;
 
-      case 'stacked area chart':
-        // Create multiple series for stacking
-        const series1 = y.map(val => val * 0.6);
-        const series2 = y.map(val => val * 0.4);
-        plotData = [
-          {
-            x: x,
-            y: series1,
-            type: 'scatter',
-            mode: 'lines',
-            fill: 'tonexty',
-            fillcolor: 'rgba(255, 111, 97, 0.7)',
-            line: { color: colorPalette[0] },
-            name: 'Series 1'
-          },
-          {
-            x: x,
-            y: series2,
-            type: 'scatter',
-            mode: 'lines',
-            fill: 'tonexty',
-            fillcolor: 'rgba(107, 91, 149, 0.7)',
-            line: { color: colorPalette[1] },
-            name: 'Series 2'
-          }
-        ];
-        layout.showlegend = true;
-        break;
 
-      case 'geographic map':
-        // Simple scatter geo plot
-        const lats = y.map(() => Math.random() * 180 - 90);
-        const lons = y.map(() => Math.random() * 360 - 180);
-        plotData = [{
-          lat: lats,
-          lon: lons,
-          text: x,
-          type: 'scattergeo',
-          mode: 'markers',
-          marker: {
-            size: y.map(val => Math.max(val / Math.max(...y) * 20, 5)),
-            color: x.map((_, i) => colorPalette[i % colorPalette.length])
-          }
-        }];
-        layout.geo = { projection: { type: 'natural earth' } };
-        break;
 
       case 'circos plot':
         // Circular genomic plot
@@ -1218,9 +1266,9 @@ export(p, file = "visualization.png")
         layout = {
           ...layout,
           scene: {
-            xaxis: { title: dataToRender.processedDatasets?.[0]?.headers?.[0] || 'X-axis' },
-            yaxis: { title: dataToRender.processedDatasets?.[0]?.headers?.[1] || 'Y-axis' },
-            zaxis: { title: dataToRender.processedDatasets?.[0]?.headers?.[2] || 'Z-axis' },
+            xaxis: { title: dataToRender.processedDatasets?.[0]?.headers?.[0] || 'First Column' },
+            yaxis: { title: dataToRender.processedDatasets?.[0]?.headers?.[1] || 'Second Column' },
+            zaxis: { title: dataToRender.processedDatasets?.[0]?.headers?.[2] || 'Third Column' },
             camera: { eye: { x: 1.5, y: 1.5, z: 1.5 } }
           },
           title: '3D Scatter Plot - Interactive Genomic Data'
@@ -1325,9 +1373,9 @@ export(p, file = "visualization.png")
         layout = {
           ...layout,
           scene: {
-            xaxis: { title: dataToRender.processedDatasets?.[0]?.headers?.[0] || 'X-axis' },
-            yaxis: { title: dataToRender.processedDatasets?.[0]?.headers?.[1] || 'Y-axis' },
-            zaxis: { title: dataToRender.processedDatasets?.[0]?.headers?.[2] || 'Z-axis' },
+            xaxis: { title: dataToRender.processedDatasets?.[0]?.headers?.[0] || 'First Column' },
+            yaxis: { title: dataToRender.processedDatasets?.[0]?.headers?.[1] || 'Second Column' },
+            zaxis: { title: dataToRender.processedDatasets?.[0]?.headers?.[2] || 'Third Column' },
             camera: { eye: { x: 1.5, y: 1.5, z: 1.5 } }
           },
           title: '3D Bubble Plot - Multi-dimensional Genomic Analysis'
@@ -1423,15 +1471,15 @@ export(p, file = "visualization.png")
             specular: 0.05,
             roughness: 0.1
           },
-          hovertemplate: 'X: %{x}<br>Y: %{y}<br>Z: %{z}<extra></extra>'
+          hovertemplate: `${dataToRender.processedDatasets?.[0]?.headers?.[0] || 'First Column'}: %{x}<br>${dataToRender.processedDatasets?.[0]?.headers?.[1] || 'Second Column'}: %{y}<br>${dataToRender.processedDatasets?.[0]?.headers?.[2] || 'Third Column'}: %{z}<extra></extra>`
         }];
         
         layout = {
           ...layout,
           scene: {
-            xaxis: { title: dataToRender.processedDatasets?.[0]?.headers?.[0] || 'X Coordinate' },
-            yaxis: { title: dataToRender.processedDatasets?.[0]?.headers?.[1] || 'Y Coordinate' },
-            zaxis: { title: dataToRender.processedDatasets?.[0]?.headers?.[2] || 'Surface Value' },
+            xaxis: { title: dataToRender.processedDatasets?.[0]?.headers?.[0] || 'First Column' },
+            yaxis: { title: dataToRender.processedDatasets?.[0]?.headers?.[1] || 'Second Column' },
+            zaxis: { title: dataToRender.processedDatasets?.[0]?.headers?.[2] || 'Third Column' },
             camera: { eye: { x: 1.87, y: 0.88, z: -0.64 } },
             aspectmode: 'cube'
           },
@@ -1561,9 +1609,9 @@ export(p, file = "visualization.png")
         layout = {
           ...layout,
           scene: {
-            xaxis: { title: dataToRender.processedDatasets?.[0]?.headers?.[0] || 'X Coordinate' },
-            yaxis: { title: dataToRender.processedDatasets?.[0]?.headers?.[1] || 'Y Coordinate' },
-            zaxis: { title: dataToRender.processedDatasets?.[0]?.headers?.[2] || 'Z Coordinate' },
+            xaxis: { title: dataToRender.processedDatasets?.[0]?.headers?.[0] || 'First Column' },
+            yaxis: { title: dataToRender.processedDatasets?.[0]?.headers?.[1] || 'Second Column' },
+            zaxis: { title: dataToRender.processedDatasets?.[0]?.headers?.[2] || 'Third Column' },
             camera: { eye: { x: 1.5, y: 1.5, z: 1.5 } },
             aspectmode: 'cube'
           },
@@ -1639,15 +1687,15 @@ export(p, file = "visualization.png")
             y: { show: false },
             z: { show: false }
           },
-          hovertemplate: 'X: %{x}<br>Y: %{y}<br>Z: %{z}<br>Value: %{value}<extra></extra>'
+          hovertemplate: `${dataToRender.processedDatasets?.[0]?.headers?.[0] || 'First Column'}: %{x}<br>${dataToRender.processedDatasets?.[0]?.headers?.[1] || 'Second Column'}: %{y}<br>${dataToRender.processedDatasets?.[0]?.headers?.[2] || 'Third Column'}: %{z}<br>Value: %{value}<extra></extra>`
         }];
         
         layout = {
           ...layout,
           scene: {
-            xaxis: { title: dataToRender.processedDatasets?.[0]?.headers?.[0] || 'X Voxel' },
-            yaxis: { title: dataToRender.processedDatasets?.[0]?.headers?.[1] || 'Y Voxel' },
-            zaxis: { title: dataToRender.processedDatasets?.[0]?.headers?.[2] || 'Z Voxel' },
+            xaxis: { title: dataToRender.processedDatasets?.[0]?.headers?.[0] || 'First Column' },
+            yaxis: { title: dataToRender.processedDatasets?.[0]?.headers?.[1] || 'Second Column' },
+            zaxis: { title: dataToRender.processedDatasets?.[0]?.headers?.[2] || 'Third Column' },
             camera: { eye: { x: 1.5, y: 1.5, z: 1.5 } },
             aspectmode: 'cube'
           },
@@ -1656,7 +1704,7 @@ export(p, file = "visualization.png")
         break;
 
       case 'line 3d':
-        // 3D Line/Trajectory plot for temporal data with proper 3D positioning
+        // 3D Line/Trajectory plot with proper 3D positioning
         let xLine3d = [], yLine3d = [], zLine3d = [];
         let hoverLine3d = [];
         
@@ -1742,12 +1790,12 @@ export(p, file = "visualization.png")
         layout = {
           ...layout,
           scene: {
-            xaxis: { title: dataToRender.processedDatasets?.[0]?.headers?.[0] || 'Time/Sequence' },
-            yaxis: { title: dataToRender.processedDatasets?.[0]?.headers?.[1] || 'Y Value' },
-            zaxis: { title: dataToRender.processedDatasets?.[0]?.headers?.[2] || 'Z Value' },
+            xaxis: { title: dataToRender.processedDatasets?.[0]?.headers?.[0] || 'First Column' },
+            yaxis: { title: dataToRender.processedDatasets?.[0]?.headers?.[1] || 'Second Column' },
+            zaxis: { title: dataToRender.processedDatasets?.[0]?.headers?.[2] || 'Third Column' },
             camera: { eye: { x: 1.5, y: 1.5, z: 1.5 } }
           },
-          title: '3D Trajectory Plot - Temporal Evolution'
+          title: '3D Trajectory Plot - Data Evolution'
         };
         break;
 
@@ -1911,9 +1959,9 @@ export(p, file = "visualization.png")
         layout = {
           ...layout,
           scene: {
-            xaxis: { title: networkHeaders[0] || 'X Position', showgrid: false },
-            yaxis: { title: networkHeaders[1] || 'Y Position', showgrid: false },
-            zaxis: { title: networkHeaders[2] || 'Z Position', showgrid: false },
+            xaxis: { title: networkHeaders[0] || 'First Column', showgrid: false },
+            yaxis: { title: networkHeaders[1] || 'Second Column', showgrid: false },
+            zaxis: { title: networkHeaders[2] || 'Third Column', showgrid: false },
             camera: { eye: { x: 1.5, y: 1.5, z: 1.5 } }
           },
           title: '3D Network Visualization - Gene/Protein Interactions',

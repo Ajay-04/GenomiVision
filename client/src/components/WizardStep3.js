@@ -512,11 +512,11 @@ const WizardStep3 = ({ onUpdate, onBack, datasets = [], selectedDatasets = [], c
                     
                     {dataset.headers && dataset.headers.length > 0 && (
                       <div className="preview-content">
-                        <div className="table-container">
+                        <div className="table-container" style={{ overflowX: 'auto', maxWidth: '100%' }}>
                           <table className="preview-table">
                             <thead>
                               <tr>
-                                {dataset.headers.slice(0, 8).map((h, i) => (
+                                {dataset.headers.map((h, i) => (
                                   <th key={i}>
                                     <span className="header-text">{h}</span>
                                     {detectedCommonColumns.includes(h) && (
@@ -524,27 +524,21 @@ const WizardStep3 = ({ onUpdate, onBack, datasets = [], selectedDatasets = [], c
                                     )}
                                   </th>
                                 ))}
-                                {dataset.headers.length > 8 && (
-                                  <th className="more-columns">+{dataset.headers.length - 8} more</th>
-                                )}
                               </tr>
                             </thead>
                             <tbody>
                               {dataset.rows && dataset.rows.slice(0, 5).map((row, idx) => (
                                 <tr key={idx}>
-                                  {row.slice(0, 8).map((cell, ci) => (
+                                  {row.map((cell, ci) => (
                                     <td key={ci}>
                                       <span className="cell-content">{cell || '—'}</span>
                                     </td>
                                   ))}
-                                  {row.length > 8 && (
-                                    <td className="more-data">...</td>
-                                  )}
                                 </tr>
                               ))}
                               {(!dataset.rows || dataset.rows.length === 0) && (
                                 <tr>
-                                  <td colSpan={Math.min(dataset.headers.length, 8)} className="no-data">
+                                  <td colSpan={dataset.headers.length} className="no-data">
                                     No data available
                                   </td>
                                 </tr>
