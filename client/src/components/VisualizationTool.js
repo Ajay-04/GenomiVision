@@ -808,6 +808,57 @@ export(p, file = "visualization.png")
         break;
 
       case 'coverage plot':
+        // Enhanced coverage plot with proper column name labeling and hover information
+        let coverageHoverText = [];
+        
+        // Create hover text with column name : value format
+        if (dataToRender.processedDatasets && dataToRender.processedDatasets[0]) {
+          const dataset = dataToRender.processedDatasets[0];
+          const rows = dataset.rows || [];
+          const headers = dataset.headers || [];
+          
+          coverageHoverText = rows.map((row, i) => {
+            let text = `${headers[0] || 'Position'}: ${row[0] || x[i]}<br>`;
+            let usedHeaders = new Set();
+            
+            // Add the first column to used headers to prevent duplicates
+            usedHeaders.add(headers[0]);
+            
+            // Show all selected columns from the current dataset (skip first column as it's already shown)
+            headers.forEach((header, j) => {
+              if (j < row.length && j > 0 && !usedHeaders.has(header)) {
+                text += `${header}: ${row[j]}<br>`;
+                usedHeaders.add(header);
+              }
+            });
+            
+            // Add data from other datasets if available (avoid duplicates)
+            if (dataToRender.processedDatasets && dataToRender.processedDatasets.length > 1) {
+              dataToRender.processedDatasets.forEach((otherDataset, datasetIndex) => {
+                if (datasetIndex > 0 && otherDataset.rows && otherDataset.rows[i]) {
+                  const otherRow = otherDataset.rows[i];
+                  const otherHeaders = otherDataset.headers || [];
+                  
+                  // Add columns from other datasets (only if not already shown)
+                  otherHeaders.forEach((header, j) => {
+                    if (j < otherRow.length && otherRow[j] !== undefined && otherRow[j] !== '' && !usedHeaders.has(header)) {
+                      text += `${header}: ${otherRow[j]}<br>`;
+                      usedHeaders.add(header);
+                    }
+                  });
+                }
+              });
+            }
+            
+            return text;
+          });
+        } else {
+          // Fallback hover text
+          coverageHoverText = x.map((label, i) => 
+            `${xAxisTitle || 'Position'}: ${label}<br>${yAxisTitle || 'Coverage'}: ${y[i]}`
+          );
+        }
+        
         plotData = [{
           x: x,
           y: y,
@@ -815,10 +866,12 @@ export(p, file = "visualization.png")
           mode: 'lines',
           fill: 'tonexty',
           fillcolor: 'rgba(74, 144, 226, 0.3)',
-          line: { color: colorPalette[0], width: 2 }
+          line: { color: colorPalette[0], width: 2 },
+          hovertext: coverageHoverText,
+          hovertemplate: '%{hovertext}<extra></extra>'
         }];
-        layout.yaxis.title = 'Coverage Depth';
-        layout.xaxis.title = 'Genomic Position';
+        layout.yaxis.title = dataToRender.processedDatasets?.[0]?.headers?.[1] || 'Coverage Depth';
+        layout.xaxis.title = dataToRender.processedDatasets?.[0]?.headers?.[0] || 'Genomic Position';
         break;
 
       case 'box plot':
@@ -1009,7 +1062,7 @@ export(p, file = "visualization.png")
         const tsne1 = y.map(() => Math.random() * 20 - 10);
         const tsne2 = y.map(() => Math.random() * 20 - 10);
         
-        // Create hover text with selected columns
+        // Create hover text with selected columns in the same format as 3D bubble plot
         let tsneHoverText = [];
         if (dataToRender.processedDatasets && dataToRender.processedDatasets[0]) {
           const dataset = dataToRender.processedDatasets[0];
@@ -1017,12 +1070,38 @@ export(p, file = "visualization.png")
           const headers = dataset.headers || [];
           
           tsneHoverText = rows.map((row, i) => {
-            let text = `Point ${i + 1}<br>`;
+            let text = `${headers[0] || 'Point'}: ${row[0] || i + 1}<br>`;
+            let usedHeaders = new Set();
+            
+            // Add the first column to used headers to prevent duplicates
+            usedHeaders.add(headers[0]);
+            
+            // Show all selected columns from the current dataset (skip first column as it's already shown)
             headers.forEach((header, j) => {
-              if (j < row.length) {
+              if (j < row.length && j > 0 && !usedHeaders.has(header)) {
                 text += `${header}: ${row[j]}<br>`;
+                usedHeaders.add(header);
               }
             });
+            
+            // Add data from other datasets if available (avoid duplicates)
+            if (dataToRender.processedDatasets && dataToRender.processedDatasets.length > 1) {
+              dataToRender.processedDatasets.forEach((otherDataset, datasetIndex) => {
+                if (datasetIndex > 0 && otherDataset.rows && otherDataset.rows[i]) {
+                  const otherRow = otherDataset.rows[i];
+                  const otherHeaders = otherDataset.headers || [];
+                  
+                  // Add columns from other datasets (only if not already shown)
+                  otherHeaders.forEach((header, j) => {
+                    if (j < otherRow.length && otherRow[j] !== undefined && otherRow[j] !== '' && !usedHeaders.has(header)) {
+                      text += `${header}: ${otherRow[j]}<br>`;
+                      usedHeaders.add(header);
+                    }
+                  });
+                }
+              });
+            }
+            
             return text;
           });
         } else {
