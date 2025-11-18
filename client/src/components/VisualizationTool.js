@@ -1124,25 +1124,7 @@ export(p, file = "visualization.png")
         layout.yaxis.title = 't-SNE 2';
         break;
 
-      case 'variant heatmap':
-        // Create a matrix for variant data
-        const variantMatrix = [];
-        const samples = ['Sample1', 'Sample2', 'Sample3', 'Sample4'];
-        for (let i = 0; i < Math.min(x.length, 20); i++) {
-          variantMatrix.push(samples.map(() => Math.random() > 0.7 ? 1 : 0));
-        }
-        plotData = [{
-          z: variantMatrix,
-          x: samples,
-          y: x.slice(0, Math.min(x.length, 20)),
-          type: 'heatmap',
-          colorscale: [[0, 'white'], [1, 'red']],
-          showscale: true
-        }];
-        layout.xaxis.title = 'Samples';
-        layout.yaxis.title = 'Variants';
-        break;
-
+      
       case 'allele frequency':
         plotData = [{
           x: x,

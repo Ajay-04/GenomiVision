@@ -23,7 +23,6 @@ const WizardStep2 = ({ onSelect, onBack }) => {
     tsne_plot: '🔄',
     
     // Variant Analysis
-    variant_heatmap: '🧩',
     allele_frequency: '📊',
     phylogenetic_tree: '🌳',
     
@@ -65,7 +64,6 @@ const WizardStep2 = ({ onSelect, onBack }) => {
       { id: 'tsne_plot', name: 't-SNE Plot', description: 'Dimensionality reduction clustering' }
     ],
     'Variant Analysis': [
-      { id: 'variant_heatmap', name: 'Variant Heatmap', description: 'Mutation presence/absence matrix' },
       { id: 'allele_frequency', name: 'Allele Frequency', description: 'Variant frequency distribution' },
       { id: 'phylogenetic_tree', name: 'Phylogenetic Tree', description: 'Evolutionary relationships' }
     ],
